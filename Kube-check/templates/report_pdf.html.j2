@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kube-Bench Security Report</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm;
+      @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 10px;
+        color: #666;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.4;
+      color: #2c3e50;
+      font-size: 11px;
+    }
+
+    .header {
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 12px;
+    }
+
+    .report-line {
+      margin: 4px 0;
+      padding: 6px 10px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      page-break-inside: avoid;
+    }
+
+    .info-line {
+      background: #e8f4fd;
+      border-left: 3px solid #3498db;
+      color: #2980b9;
+      font-weight: bold;
+    }
+
+    .pass-line {
+      background: #e8f5e8;
+      border-left: 3px solid #27ae60;
+      color: #1b5e20;
+    }
+
+    .fail-line {
+      background: #ffebee;
+      border-left: 3px solid #e74c3c;
+      color: #b71c1c;
+    }
+
+    .warn-line {
+      background: #fff8e1;
+      border-left: 3px solid #f39c12;
+      color: #e65100;
+    }
+
+    .remediation-header {
+      background: #f3e5f5;
+      border-left: 3px solid #8e44ad;
+      color: #4a148c;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+
+    .summary-header {
+      background: #e0f2f1;
+      border-left: 3px solid #16a085;
+      color: #004d40;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+
+    /* ← THÊM TOTAL SUMMARY HEADER CHO PDF */
+    .total-summary-header {
+      background: #e3f2fd;
+      border-left: 3px solid #2196f3;
+      color: #0d47a1;
+      font-weight: bold;
+      margin-top: 15px;
+      font-size: 12px;
+    }
+
+    .summary-line {
+      margin: 3px 0;
+      padding: 5px 8px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      font-size: 10px;
+    }
+
+    .summary-line.pass-summary {
+      background: #e8f5e8;
+      border-left: 3px solid #27ae60;
+      color: #1b5e20;
+    }
+
+    .summary-line.fail-summary {
+      background: #ffebee;
+      border-left: 3px solid #e74c3c;
+      color: #b71c1c;
+    }
+
+    .summary-line.warn-summary {
+      background: #fff8e1;
+      border-left: 3px solid #f39c12;
+      color: #e65100;
+    }
+
+    .summary-line.info-summary {
+      background: #e3f2fd;
+      border-left: 3px solid #3498db;
+      color: #0d47a1;
+    }
+
+    /* ← THÊM TOTAL SUMMARY STYLES CHO PDF */
+    .total-summary {
+      background: #f8f9fa;
+      border-left: 3px solid #6c757d;
+      color: #495057;
+      font-weight: bold;
+    }
+
+    .compliance-rate {
+      background: #d1ecf1;
+      border-left: 3px solid #17a2b8;
+      color: #0c5460;
+      font-weight: bold;
+    }
+
+    .risk-level {
+      background: #f8d7da;
+      border-left: 3px solid #dc3545;
+      color: #721c24;
+      font-weight: bold;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-weight: bold;
+      font-size: 8px;
+      margin-right: 6px;
+      color: white;
+      min-width: 35px;
+      text-align: center;
+    }
+
+    .badge-pass { background: #27ae60; }
+    .badge-fail { background: #e74c3c; }
+    .badge-warn { background: #f39c12; }
+    .badge-info { background: #3498db; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Kube-Bench Security Report</h1>
+    <p>Generated: {{ timestamp }}</p>
+  </div>
+
+  {% for line in report_lines %}
+    {% if line.startswith('[INFO]') %}
+      <div class="report-line info-line">
+        [INFO] {{ line[6:] }}
+      </div>
+    {% elif line.startswith('[PASS]') %}
+      <div class="report-line pass-line">
+        <span class="badge-pass status-badge">PASS</span>
+        {{ line[7:] }}
+      </div>
+    {% elif line.startswith('[FAIL]') %}
+      <div class="report-line fail-line">
+        <span class="badge-fail status-badge">FAIL</span>
+        {{ line[7:] }}
+      </div>
+    {% elif line.startswith('[WARN]') %}
+      <div class="report-line warn-line">
+        <span class="badge-warn status-badge">WARN</span>
+        {{ line[7:] }}
+      </div>
+    {% elif line.startswith('== Remediations ==') %}
+      <div class="report-line remediation-header">
+        Remediations
+      </div>
+    {% elif line.startswith('== Summary Total ==') %}
+      <div class="report-line total-summary-header">
+        {{ line[3:] }}
+      </div>
+    {% elif line.startswith('== Summary') %}
+      <div class="report-line summary-header">
+        {{ line[3:] }}
+      </div>
+    {% elif 'checks PASS' in line %}
+      <div class="summary-line pass-summary">
+        {{ line }}
+      </div>
+    {% elif 'checks FAIL' in line %}
+      <div class="summary-line fail-summary">
+        {{ line }}
+      </div>
+    {% elif 'checks WARN' in line %}
+      <div class="summary-line warn-summary">
+        {{ line }}
+      </div>
+    {% elif 'checks INFO' in line %}
+      <div class="summary-line info-summary">
+        {{ line }}
+      </div>
+    {% elif 'Total:' in line and 'checks' in line %}
+      <div class="summary-line total-summary">
+        {{ line }}
+      </div>
+    {% elif 'Compliance Rate:' in line %}
+      <div class="summary-line compliance-rate">
+        {{ line }}
+      </div>
+    {% elif 'Risk Level:' in line %}
+      <div class="summary-line risk-level">
+        {{ line }}
+      </div>
+    {% elif line.strip() and not line.startswith('==') %}
+      <div class="report-line">
+        {{ line|replace('<', '&lt;')|replace('>', '&gt;')|safe }}
+      </div>
+    {% endif %}
+  {% endfor %}
+</body>
+</html>

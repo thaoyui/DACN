@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kube-Bench Security Report</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #2c3e50;
+      background: linear-gradient(135deg, #0f3460 0%, #16537e 50%, #1e6091 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 15px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+      overflow: hidden;
+      border: 1px solid #e1e8ed;
+      position: relative;
+    }
+    
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3498db 0%, #9b59b6 25%, #e74c3c 50%, #f39c12 75%, #27ae60 100%);
+      z-index: 10;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
+      color: #ffffff;
+      padding: 40px 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(52, 152, 219, 0.1) 0%, rgba(155, 89, 182, 0.1) 100%);
+    }
+    
+    .header h1 {
+      font-size: 2.8em;
+      margin-bottom: 15px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 1;
+      font-weight: 700;
+    }
+    
+    .header p {
+      font-size: 1.2em;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+      font-weight: 300;
+    }
+    
+    .content {
+      padding: 40px 30px;
+      background: #fafbfc;
+    }
+    
+    .report-line {
+      margin: 10px 0;
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .report-line::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      transition: width 0.3s ease;
+    }
+    
+    .report-line:hover {
+      transform: translateX(3px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+    }
+    
+    .report-line:hover::before {
+      width: 8px;
+    }
+    
+    /* INFO Lines */
+    .info-line {
+      background: linear-gradient(135deg, #e8f4fd 0%, #d1e7dd 100%);
+      border-left: 5px solid #3498db;
+      font-weight: 600;
+      font-size: 1.15em;
+      color: #2980b9;
+      box-shadow: 0 3px 6px rgba(52, 152, 219, 0.15);
+    }
+    
+    .info-line::before {
+      background: #3498db;
+    }
+    
+    .info-line:hover {
+      background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+    }
+    
+    /* PASS Lines */
+    .pass-line {
+      background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+      border-left: 5px solid #27ae60;
+      color: #1b5e20;
+      box-shadow: 0 3px 6px rgba(39, 174, 96, 0.15);
+    }
+    
+    .pass-line::before {
+      background: #27ae60;
+    }
+    
+    .pass-line:hover {
+      background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+    }
+    
+    /* FAIL Lines */
+    .fail-line {
+      background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+      border-left: 5px solid #e74c3c;
+      color: #b71c1c;
+      box-shadow: 0 3px 6px rgba(231, 76, 60, 0.15);
+    }
+    
+    .fail-line::before {
+      background: #e74c3c;
+    }
+    
+    .fail-line:hover {
+      background: linear-gradient(135deg, #ffcdd2 0%, #f8bbd9 100%);
+    }
+    
+    /* WARN Lines */
+    .warn-line {
+      background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+      border-left: 5px solid #f39c12;
+      color: #e65100;
+      box-shadow: 0 3px 6px rgba(243, 156, 18, 0.15);
+    }
+    
+    .warn-line::before {
+      background: #f39c12;
+    }
+    
+    .warn-line:hover {
+      background: linear-gradient(135deg, #ffe0b2 0%, #ffcc02 100%);
+    }
+    
+    /* Header Sections */
+    .remediation-header {
+      background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+      border-left: 5px solid #8e44ad;
+      color: #4a148c;
+      font-weight: 700;
+      font-size: 1.3em;
+      margin-top: 40px;
+      box-shadow: 0 3px 6px rgba(142, 68, 173, 0.15);
+    }
+    
+    .remediation-header::before {
+      background: #8e44ad;
+    }
+    
+    .summary-header {
+      background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+      border-left: 5px solid #16a085;
+      color: #004d40;
+      font-weight: 700;
+      font-size: 1.3em;
+      margin-top: 40px;
+      box-shadow: 0 3px 6px rgba(22, 160, 133, 0.15);
+    }
+    
+    .summary-header::before {
+      background: #16a085;
+    }
+    
+    /* ← THÊM TOTAL SUMMARY HEADER */
+    .total-summary-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-left: 5px solid #4c63d2;
+      color: white;
+      font-weight: 700;
+      font-size: 1.4em;
+      margin-top: 40px;
+      box-shadow: 0 4px 8px rgba(76, 99, 210, 0.2);
+    }
+    
+    .total-summary-header::before {
+      background: #4c63d2;
+    }
+    
+    /* Summary Statistics */
+    .summary-line {
+      margin: 6px 0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-weight: 600;
+      font-size: 1.05em;
+      transition: all 0.3s ease;
+    }
+    
+    .summary-line.pass-summary {
+      background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+      border-left: 5px solid #27ae60;
+      color: #1b5e20;
+      box-shadow: 0 2px 4px rgba(39, 174, 96, 0.1);
+    }
+    
+    .summary-line.fail-summary {
+      background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+      border-left: 5px solid #e74c3c;
+      color: #b71c1c;
+      box-shadow: 0 2px 4px rgba(231, 76, 60, 0.1);
+    }
+    
+    .summary-line.warn-summary {
+      background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+      border-left: 5px solid #f39c12;
+      color: #e65100;
+      box-shadow: 0 2px 4px rgba(243, 156, 18, 0.1);
+    }
+    
+    .summary-line.info-summary {
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      border-left: 5px solid #3498db;
+      color: #0d47a1;
+      box-shadow: 0 2px 4px rgba(52, 152, 219, 0.1);
+    }
+    
+    /* ← THÊM TOTAL SUMMARY STYLES */
+    .total-summary {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-left: 5px solid #6c757d;
+      color: #495057;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    
+    .compliance-rate {
+      background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+      border-left: 5px solid #17a2b8;
+      color: #0c5460;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    
+    .risk-level {
+      background: linear-gradient(135deg, #f8d7da 0%, #f1c0c7 100%);
+      border-left: 5px solid #dc3545;
+      color: #721c24;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    
+    /* Status Badges */
+    .status-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 25px;
+      font-weight: 700;
+      font-size: 0.85em;
+      margin-right: 15px;
+      min-width: 70px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+    }
+    
+    .badge-pass {
+      background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+      color: white;
+    }
+    
+    .badge-fail {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+      animation: pulse 2s infinite;
+    }
+    
+    .badge-warn {
+      background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+      color: white;
+    }
+    
+    .badge-info {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+    }
+    
+    .status-badge:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    /* Footer */
+    .footer {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: #ecf0f1;
+      text-align: center;
+      padding: 25px;
+      font-size: 1em;
+      border-top: 4px solid #3498db;
+      font-weight: 300;
+    }
+    
+    /* Animations */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        margin: 10px;
+        border-radius: 10px;
+      }
+      
+      .content {
+        padding: 25px 20px;
+      }
+      
+      .header {
+        padding: 30px 20px;
+      }
+      
+      .header h1 {
+        font-size: 2.2em;
+      }
+      
+      .report-line {
+        padding: 12px 14px;
+        margin: 8px 0;
+      }
+      
+      .status-badge {
+        min-width: 55px;
+        padding: 6px 12px;
+        font-size: 0.8em;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header h1 {
+        font-size: 1.8em;
+      }
+      
+      .header p {
+        font-size: 1em;
+      }
+      
+      .content {
+        padding: 20px 15px;
+      }
+      
+      .report-line {
+        padding: 10px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛡️ Kube-Bench Security Report</h1>
+      <p>Kubernetes CIS Benchmark Compliance Assessment</p>
+    </div>
+    
+    <div class="content">
+      {% for line in report_lines %}
+        {% if line.startswith('[INFO]') %}
+          <div class="report-line info-line">
+            📋 {{ line[6:] }}
+          </div>
+        {% elif line.startswith('[PASS]') %}
+          <div class="report-line pass-line">
+            <span class="badge-pass status-badge">Pass</span>
+            {{ line[7:] }}
+          </div>
+        {% elif line.startswith('[FAIL]') %}
+          <div class="report-line fail-line">
+            <span class="badge-fail status-badge">Fail</span>
+            {{ line[7:] }}
+          </div>
+        {% elif line.startswith('[WARN]') %}
+          <div class="report-line warn-line">
+            <span class="badge-warn status-badge">Warn</span>
+            {{ line[7:] }}
+          </div>
+        {% elif line.startswith('== Remediations ==') %}
+          <div class="report-line remediation-header">
+            🔧 Remediations
+          </div>
+        {% elif line.startswith('== Summary Total ==') %}
+          <div class="report-line total-summary-header">
+            📊 {{ line[3:] }}
+          </div>
+        {% elif line.startswith('== Summary') %}
+          <div class="report-line summary-header">
+            📊 {{ line[3:] }}
+          </div>
+        {% elif 'checks PASS' in line %}
+          <div class="summary-line pass-summary">
+            ✅ {{ line }}
+          </div>
+        {% elif 'checks FAIL' in line %}
+          <div class="summary-line fail-summary">
+            ❌ {{ line }}
+          </div>
+        {% elif 'checks WARN' in line %}
+          <div class="summary-line warn-summary">
+            ⚠️ {{ line }}
+          </div>
+        {% elif 'checks INFO' in line %}
+          <div class="summary-line info-summary">
+            ℹ️ {{ line }}
+          </div>
+        {% elif 'Total:' in line and 'checks' in line %}
+          <div class="summary-line total-summary">
+            🔢 {{ line }}
+          </div>
+        {% elif 'Compliance Rate:' in line %}
+          <div class="summary-line compliance-rate">
+            📈 {{ line }}
+          </div>
+        {% elif 'Risk Level:' in line %}
+          <div class="summary-line risk-level">
+            ⚠️ {{ line }}
+          </div>
+        {% elif line.strip() and not line.startswith('==') %}
+          <div class="report-line">
+            {% if '<' in line and '>' in line %}
+              {{ line|replace('<', '&lt;')|replace('>', '&gt;')|safe }}
+            {% else %}
+              {{ line }}
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    
+    <div class="footer">
+      Generated by Kube-Bench Python • {{ timestamp if timestamp else '2025-07-05' }}
+    </div>
+  </div>
+</body>
+</html>
