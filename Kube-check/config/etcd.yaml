@@ -22,6 +22,34 @@ groups:
           on the master node and set the below parameters.
           --cert-file=</path/to/ca-file>
           --key-file=</path/to/key-file>
+        auto_remediation:
+            command: |
+              #!/bin/bash
+              set -e
+              etcdconf="/etc/kubernetes/manifests/etcd.yaml"
+              CERT="/etc/kubernetes/pki/etcd/server.crt"
+              KEY="/etc/kubernetes/pki/etcd/server.key"
+              echo "=== Remediating etcd --cert-file/--key-file ==="
+              # Normalize or insert --cert-file
+              if grep -qE "^[[:space:]]*- --cert-file=" "$etcdconf"; then
+                sed -i "s|^[[:space:]]*- --cert-file=.*|    - --cert-file=$CERT|" "$etcdconf"
+                echo "✓ Updated --cert-file to $CERT"
+              else
+                sed -i '/^\s*image:/i\    - --cert-file='"$CERT" "$etcdconf"
+                echo "✓ Inserted --cert-file=$CERT"
+              fi
+              # Normalize or insert --key-file
+              if grep -qE "^[[:space:]]*- --key-file=" "$etcdconf"; then
+                sed -i "s|^[[:space:]]*- --key-file=.*|    - --key-file=$KEY|" "$etcdconf"
+                echo "✓ Updated --key-file to $KEY"
+              else
+                sed -i '/^\s*image:/i\    - --key-file='"$KEY" "$etcdconf"
+                echo "✓ Inserted --key-file=$KEY"
+              fi
+
+            description: "Ensure etcd manifest has --cert-file and --key-file (insert if missing)"
+            requires_sudo: true
+            dry_run_safe: true
         scored: true
 
       - id: 2.2
@@ -38,17 +66,29 @@ groups:
           Edit the etcd pod specification file $etcdconf on the master
           node and set the below parameter.
           --client-cert-auth="true"
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$etcdconf"
+            # If flag exists (not commented), normalize to true; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --client-cert-auth=" "$CONF"; then
+              sed -i 's|^[[:space:]]*- --client-cert-auth=.*|    - --client-cert-auth=true|' "$CONF"
+              echo "✓ Updated --client-cert-auth=true"
+            else
+              sed -i '/^\s*image:/i\    - --client-cert-auth=true' "$CONF"
+              echo "✓ Inserted --client-cert-auth=true"
+            fi
+          description: "Ensure --client-cert-auth=true is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 2.3
         text: "Ensure that the --auto-tls argument is not set to true (Automated)"
         audit: "/bin/ps -ef | /bin/grep $etcdbin | /bin/grep -v grep"
         tests:
-          bin_op: or
           test_items:
-            - flag: "--auto-tls"
-              env: "ETCD_AUTO_TLS"
-              set: false
             - flag: "--auto-tls"
               env: "ETCD_AUTO_TLS"
               compare:
@@ -58,6 +98,22 @@ groups:
           Edit the etcd pod specification file $etcdconf on the master
           node and either remove the --auto-tls parameter or set it to false.
             --auto-tls=false
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$etcdconf"
+            # If flag exists (not commented), normalize to false; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --auto-tls" "$CONF"; then
+              sed -i 's|^[[:space:]]*- --auto-tls=.*|    - --auto-tls=false|' "$CONF"
+              echo "✓ Updated --auto-tls=false"
+            else
+              sed -i '/^\s*image:/i\    - --auto-tls=false' "$CONF"
+              echo "✓ Inserted --auto-tls=false"
+            fi
+          description: "Ensure --auto-tls=false is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 2.4
@@ -78,6 +134,35 @@ groups:
           master node and set the below parameters.
           --peer-client-file=</path/to/peer-cert-file>
           --peer-key-file=</path/to/peer-key-file>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            etcdconf="/etc/kubernetes/manifests/etcd.yaml"
+            PEER_CERT="/etc/kubernetes/pki/etcd/peer.crt"
+            PEER_KEY="/etc/kubernetes/pki/etcd/peer.key"
+            echo "=== Remediating etcd --peer-cert-file/--peer-key-file ==="
+            
+            # Normalize or insert --peer-cert-file
+            if grep -qE "^[[:space:]]*- --peer-cert-file=" "$etcdconf"; then
+              sed -i "s|^[[:space:]]*- --peer-cert-file=.*|    - --peer-cert-file=$PEER_CERT|" "$etcdconf"
+              echo "✓ Updated --peer-cert-file to $PEER_CERT"
+            else
+              sed -i '/^\s*image:/i\    - --peer-cert-file='"$PEER_CERT" "$etcdconf"
+              echo "✓ Inserted --peer-cert-file=$PEER_CERT"
+            fi
+            
+            # Normalize or insert --peer-key-file
+            if grep -qE "^[[:space:]]*- --peer-key-file=" "$etcdconf"; then
+              sed -i "s|^[[:space:]]*- --peer-key-file=.*|    - --peer-key-file=$PEER_KEY|" "$etcdconf"
+              echo "✓ Updated --peer-key-file to $PEER_KEY"
+            else
+              sed -i '/^\s*image:/i\    - --peer-key-file='"$PEER_KEY" "$etcdconf"
+              echo "✓ Inserted --peer-key-file=$PEER_KEY"
+            fi
+          description: "Ensure etcd manifest contains --peer-cert-file and --peer-key-file (append if missing)"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 2.5
@@ -94,19 +179,30 @@ groups:
           Edit the etcd pod specification file $etcdconf on the master
           node and set the below parameter.
           --peer-client-cert-auth=true
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$etcdconf"
+            # If flag exists (not commented), normalize to true; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --peer-client-cert-auth=" "$CONF"; then
+              sed -i 's|^[[:space:]]*- --peer-client-cert-auth=.*|    - --peer-client-cert-auth=true|' "$CONF"
+              echo "✓ Updated --peer-client-cert-auth=true"
+            else
+              sed -i '/^\s*image:/i\    - --peer-client-cert-auth=true' "$CONF"
+              echo "✓ Inserted --peer-client-cert-auth=true"
+            fi
+          description: "Enable peer client certificate authentication in etcd manifest"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 2.6
         text: "Ensure that the --peer-auto-tls argument is not set to true (Automated)"
         audit: "/bin/ps -ef | /bin/grep $etcdbin | /bin/grep -v grep"
         tests:
-          bin_op: or
           test_items:
             - flag: "--peer-auto-tls"
-              env: "ETCD_PEER_AUTO_TLS"
-              set: false
-            - flag: "--peer-auto-tls"
-              env: "ETCD_PEER_AUTO_TLS"
               compare:
                 op: eq
                 value: false
@@ -114,6 +210,21 @@ groups:
           Edit the etcd pod specification file $etcdconf on the master
           node and either remove the --peer-auto-tls parameter or set it to false.
           --peer-auto-tls=false
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$etcdconf"
+            # If flag exists with value=true, change to false; if exists with false, leave it; if not exists, leave it (OR logic)
+            if grep -qE "^[[:space:]]*- --peer-auto-tls=true" "$CONF"; then
+              sed -i 's|^[[:space:]]*- --peer-auto-tls=true|    - --peer-auto-tls=false|' "$CONF"
+              echo "✓ Changed --peer-auto-tls=true to false"
+            else
+              echo "✓ --peer-auto-tls is compliant (not set to true)"
+            fi
+          description: "Ensure --peer-auto-tls is not set to true"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 2.7

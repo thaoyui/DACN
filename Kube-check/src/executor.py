@@ -999,6 +999,113 @@ class CheckExecutor:
             'multiple_values': True
         }
     
+    def execute_auto_remediation(self, check: Dict[str, Any], dry_run: bool = False, 
+                                require_confirmation: bool = True) -> Dict[str, Any]:
+        """Execute auto remediation for a check if available"""
+        auto_remediation = check.get('auto_remediation')
+        if not auto_remediation:
+            return {
+                'success': False,
+                'error': 'No auto remediation available for this check',
+                'executed': False
+            }
+        
+        command = auto_remediation.get('command')
+        description = auto_remediation.get('description', 'Auto remediation')
+        requires_sudo = auto_remediation.get('requires_sudo', False)
+        dry_run_safe = auto_remediation.get('dry_run_safe', True)
+        
+        # Apply variable substitutions to command
+        command = self._apply_substitutions(command)
+        
+        # Check if command is safe for dry run
+        if dry_run and not dry_run_safe:
+            return {
+                'success': False,
+                'error': 'This remediation is not safe for dry run',
+                'executed': False
+            }
+        
+        # Prepare command for execution
+        if requires_sudo:
+            if dry_run:
+                cmd = ['sudo', '-n', 'echo', f'DRY RUN: {command}']
+            else:
+                cmd = ['sudo', '-n', 'sh', '-c', command]
+        else:
+            if dry_run:
+                cmd = ['sh', '-c', f'echo "DRY RUN: {command}"']
+            else:
+                cmd = ['sh', '-c', command]
+        
+        try:
+            # Execute command
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,  # 30 second timeout
+                check=False
+            )
+            
+            return {
+                'success': result.returncode == 0,
+                'command': command,
+                'description': description,
+                'return_code': result.returncode,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'executed': not dry_run,
+                'dry_run': dry_run
+            }
+            
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'error': 'Command execution timed out',
+                'command': command,
+                'description': description,
+                'executed': False,
+                'dry_run': dry_run
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Command execution failed: {str(e)}',
+                'command': command,
+                'description': description,
+                'executed': False,
+                'dry_run': dry_run
+            }
+    
+    def _apply_substitutions(self, text: str) -> str:
+        """Apply variable substitutions to text (same as in main.py)"""
+        substitutions = {
+            '$apiserverconf': '/etc/kubernetes/manifests/kube-apiserver.yaml',
+            '$controllermanagerconf': '/etc/kubernetes/manifests/kube-controller-manager.yaml',
+            '$schedulerconf': '/etc/kubernetes/manifests/kube-scheduler.yaml',
+            '$etcdconf': '/etc/kubernetes/manifests/etcd.yaml',
+            '$apiserverbin': 'kube-apiserver',
+            '$controllermanagerbin': 'kube-controller-manager',
+            '$schedulerbin': 'kube-scheduler',
+            '$etcdbin': 'etcd',
+            '$kubeletbin': 'kubelet',
+            '$etcddatadir': '/var/lib/etcd',
+            '$schedulerkubeconfig': '/etc/kubernetes/scheduler.conf',
+            '$controllermanagerkubeconfig': '/etc/kubernetes/controller-manager.conf',
+            '$kubeletsvc': '/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf',
+            '$kubeletkubeconfig': '/etc/kubernetes/kubelet.conf',
+            '$kubeletconf': '/var/lib/kubelet/config.yaml',
+            '$kubeletcafile': '/etc/kubernetes/pki/ca.crt',
+            '$proxybin': 'kube-proxy',
+            '$proxykubeconfig': '/var/lib/kube-proxy/kubeconfig.conf',
+            '$proxyconf': '/var/lib/kube-proxy/config.conf'
+        }
+        
+        for var, value in substitutions.items():
+            text = text.replace(var, value)
+        return text
+
     def cleanup(self):
         """Cleanup resources"""
         self.cache.clear()

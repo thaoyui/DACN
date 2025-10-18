@@ -60,8 +60,8 @@ class KubeBenchPython:
         'policies': '5 Kubernetes Policies'
     }
     
-    def __init__(self, config_path: str, log_level: str = 'INFO', no_color: bool = False):
-        self.logger = Logger(__name__, log_level)
+    def __init__(self, config_path: str, log_level: str = 'INFO', no_color: bool = False, enable_file_logging: bool = False):
+        self.logger = Logger(__name__, log_level, enable_file_logging)
         self.no_color = no_color
         self.start_time = time.time()
         self.interrupted = False
@@ -330,6 +330,55 @@ class KubeBenchPython:
         
         return config_checks
 
+    def execute_auto_remediation_for_failed_checks(self, dry_run: bool = False, 
+                                                  require_confirmation: bool = True) -> Dict[str, Any]:
+        """Execute auto remediation for all failed checks that have auto remediation available"""
+        remediation_results = {
+            'total_checks': 0,
+            'remediation_available': 0,
+            'remediation_executed': 0,
+            'remediation_successful': 0,
+            'remediation_failed': 0,
+            'results': []
+        }
+        
+        if not self.results:
+            self.logger.warning("No results found. Did you run checks first?")
+            return remediation_results
+        
+        # Find all failed checks with auto remediation
+        for group in self.results:
+            for check in group.get('checks', []):
+                status = self._get_check_status(check)
+                self.logger.debug(f"Check {check.get('id')}: status={status}, has_auto_remediation={bool(check.get('auto_remediation'))}")
+                
+                if status in ['FAIL', 'WARN'] and check.get('auto_remediation'):
+                    remediation_results['total_checks'] += 1
+                    remediation_results['remediation_available'] += 1
+                    
+                    # Execute auto remediation
+                    result = self.executor.execute_auto_remediation(
+                        check, 
+                        dry_run=dry_run,
+                        require_confirmation=require_confirmation
+                    )
+                    
+                    remediation_results['results'].append({
+                        'check_id': check.get('id'),
+                        'check_text': check.get('text'),
+                        'status': status,
+                        'remediation_result': result
+                    })
+                    
+                    if result.get('executed', False):
+                        remediation_results['remediation_executed'] += 1
+                        if result.get('success', False):
+                            remediation_results['remediation_successful'] += 1
+                        else:
+                            remediation_results['remediation_failed'] += 1
+        
+        return remediation_results
+
     def run_multiple_configs_with_report(self, check_ids: List[str], output_format: str = 'text', 
                                         output_file: Optional[str] = None, **kwargs) -> bool:
         """Simplified version using centralized methods"""
@@ -552,6 +601,11 @@ class KubeBenchPython:
                         # Execute check
                         try:
                             result = self.executor.execute_check(parsed_check, component_type)
+                            
+                            # Add auto_remediation info to result
+                            if parsed_check.get('auto_remediation'):
+                                result['auto_remediation'] = parsed_check['auto_remediation']
+                            
                             group_results['checks'].append(result)
                             
                             # Print result
@@ -645,7 +699,7 @@ class KubeBenchPython:
     def _add_failed_check_result(self, group_results: Dict, check: Dict, error_msg: str):
         """Helper method to add failed check result"""
         try:
-            group_results['checks'].append({
+            result = {
                 'id': check.get('id', 'unknown'),
                 'text': check.get('text', 'No description'),
                 'passed': False,
@@ -653,7 +707,13 @@ class KubeBenchPython:
                 'test_results': [],
                 'error': error_msg,
                 'type': 'error'
-            })
+            }
+            
+            # Add auto_remediation if available
+            if check.get('auto_remediation'):
+                result['auto_remediation'] = check['auto_remediation']
+            
+            group_results['checks'].append(result)
         except Exception as e:
             self.logger.error(f"Failed to add failed check result: {e}")
 
@@ -820,8 +880,9 @@ class KubeBenchPython:
 @click.option('--log-level', type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR']), 
               default='INFO', help='Logging level')
 @click.option('--no-color', is_flag=True, help='Disable colored output')
+@click.option('--enable-file-logging', is_flag=True, help='Enable file logging (logs/kube-bench.log)')
 @click.pass_context
-def cli(ctx, config, config_dir, log_level, no_color):
+def cli(ctx, config, config_dir, log_level, no_color, enable_file_logging):
     """Kubernetes Security Benchmark Tool for K8s v1.30 (kube-bench compatible)"""
     ctx.ensure_object(dict)
     
@@ -831,6 +892,7 @@ def cli(ctx, config, config_dir, log_level, no_color):
     ctx.obj['config'] = config
     ctx.obj['log_level'] = log_level
     ctx.obj['no_color'] = no_color
+    ctx.obj['enable_file_logging'] = enable_file_logging
 
 @cli.command()
 @click.option('--targets', multiple=True, help='Targets to run (like kube-bench --targets)')
@@ -845,10 +907,13 @@ def cli(ctx, config, config_dir, log_level, no_color):
 @click.option('--no-remediation', is_flag=True, help='Exclude remediation from output')
 @click.option('--no-progress', is_flag=True, help='Disable progress bar')
 @click.option('--auto-config', is_flag=True, default=True, help='Automatically map checks to config files (default: True)')
+@click.option('--auto-remediate', is_flag=True, help='Automatically execute remediation for failed checks')
+@click.option('--dry-run', is_flag=True, help='Show what would be executed without actually running commands (for auto-remediation)')
+@click.option('--yes', is_flag=True, help='Skip confirmation prompts (for auto-remediation)')
 @click.argument('check_files', nargs=-1)
 @click.pass_context
 def run(ctx, targets, benchmark, check, group, output_format, output_file, 
-        no_passed, no_manual, no_remediation, no_progress, auto_config, check_files):
+        no_passed, no_manual, no_remediation, no_progress, auto_config, auto_remediate, dry_run, yes, check_files):
     """Run security checks (kube-bench compatible with auto-config mapping)"""
     
     # Parse check IDs từ comma-separated string
@@ -862,7 +927,8 @@ def run(ctx, targets, benchmark, check, group, output_format, output_file,
         kube_bench = KubeBenchPython(
             ctx.obj['config'], 
             ctx.obj['log_level'], 
-            ctx.obj['no_color']
+            ctx.obj['no_color'],
+            ctx.obj['enable_file_logging']
         )
         
         # If specific checks are provided, use auto-mapping
@@ -921,9 +987,131 @@ def run(ctx, targets, benchmark, check, group, output_format, output_file,
             click.echo("Failed to generate report", err=True)
             sys.exit(1)
         
+        # Execute auto remediation if requested
+        if auto_remediate:
+            click.echo("\n=== Auto Remediation ===")
+            remediation_results = kube_bench.execute_auto_remediation_for_failed_checks(
+                dry_run=dry_run,
+                require_confirmation=not yes
+            )
+            
+            # Display remediation summary
+            click.echo(f"Remediation available: {remediation_results['remediation_available']}")
+            click.echo(f"Remediation executed: {remediation_results['remediation_executed']}")
+            click.echo(f"Remediation successful: {remediation_results['remediation_successful']}")
+            click.echo(f"Remediation failed: {remediation_results['remediation_failed']}")
+            
+            # Show detailed results for each remediation
+            for result in remediation_results['results']:
+                remediation_result = result['remediation_result']
+                status = "SUCCESS" if remediation_result.get('success') else "FAILED"
+                click.echo(f"Check {result['check_id']}: {status}")
+                if not remediation_result.get('success'):
+                    click.echo(f"  Error: {remediation_result.get('error', 'Unknown error')}")
+                click.echo(f"  Command: {remediation_result.get('command', 'N/A')}")
+        
         # Check for failures and exit accordingly (like kube-bench)
         summary = kube_bench._generate_summary()
         if summary.get('failed_checks', 0) > 0:
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        click.echo("\nOperation cancelled by user", err=True)
+        sys.exit(130)
+    except Exception as e:
+        click.echo(f"Fatal error: {e}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.option('--dry-run', is_flag=True, help='Show what would be executed without actually running commands')
+@click.option('--yes', is_flag=True, help='Skip confirmation prompts')
+@click.option('--check', help='Specific check ID to remediate (e.g., 1.1.1)')
+@click.option('--output-format', type=click.Choice(['text', 'json', 'yaml']), 
+              default='text', help='Output format for remediation results')
+@click.option('--output-file', help='Output file path for remediation results')
+@click.pass_context
+def remediate(ctx, dry_run, yes, check, output_format, output_file):
+    """Execute auto remediation for failed checks"""
+    
+    try:
+        # Initialize KubeBench
+        kube_bench = KubeBenchPython(
+            ctx.obj['config'], 
+            ctx.obj['log_level'], 
+            ctx.obj['no_color'],
+            ctx.obj['enable_file_logging']
+        )
+        
+        # If specific check is provided, run only that check first
+        if check:
+            click.echo(f"Running check {check} first...")
+            success = kube_bench.run_multiple_configs_with_report(
+                [check],
+                output_format='text',
+                progress=True
+            )
+            if not success:
+                click.echo(f"Failed to run check {check}", err=True)
+                sys.exit(1)
+        else:
+            # Run all checks first
+            click.echo("Running all checks first...")
+            success = kube_bench.run_multiple_configs_with_report(
+                [],
+                output_format='text',
+                progress=True
+            )
+            if not success:
+                click.echo("Failed to run checks", err=True)
+                sys.exit(1)
+        
+        # Execute auto remediation
+        click.echo(f"\nExecuting auto remediation (dry_run={dry_run})...")
+        remediation_results = kube_bench.execute_auto_remediation_for_failed_checks(
+            dry_run=dry_run,
+            require_confirmation=not yes
+        )
+        
+        # Display results
+        if output_format == 'json':
+            import json
+            output = json.dumps(remediation_results, indent=2)
+        elif output_format == 'yaml':
+            import yaml
+            output = yaml.dump(remediation_results, default_flow_style=False)
+        else:
+            # Text format
+            output_lines = []
+            output_lines.append("=== Auto Remediation Results ===")
+            output_lines.append(f"Total checks: {remediation_results['total_checks']}")
+            output_lines.append(f"Remediation available: {remediation_results['remediation_available']}")
+            output_lines.append(f"Remediation executed: {remediation_results['remediation_executed']}")
+            output_lines.append(f"Remediation successful: {remediation_results['remediation_successful']}")
+            output_lines.append(f"Remediation failed: {remediation_results['remediation_failed']}")
+            output_lines.append("")
+            
+            for result in remediation_results['results']:
+                output_lines.append(f"Check: {result['check_id']} - {result['check_text']}")
+                output_lines.append(f"Status: {result['status']}")
+                remediation_result = result['remediation_result']
+                if remediation_result.get('success'):
+                    output_lines.append("Remediation: SUCCESS")
+                else:
+                    output_lines.append(f"Remediation: FAILED - {remediation_result.get('error', 'Unknown error')}")
+                output_lines.append(f"Command: {remediation_result.get('command', 'N/A')}")
+                output_lines.append("")
+            
+            output = '\n'.join(output_lines)
+        
+        if output_file:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(output)
+            click.echo(f"Remediation results saved to: {output_file}")
+        else:
+            click.echo(output)
+        
+        # Exit with error code if any remediation failed
+        if remediation_results['remediation_failed'] > 0:
             sys.exit(1)
             
     except KeyboardInterrupt:

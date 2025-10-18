@@ -19,6 +19,11 @@ groups:
           Run the below command (based on the file location on your system) on the
           control plane node.
           For example, chmod 600 $apiserverconf
+        auto_remediation:
+          command: "chmod 600 $apiserverconf"
+          description: "Set API server pod specification file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 1.1.2
@@ -30,6 +35,11 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example, chown root:root $apiserverconf
+        auto_remediation:
+          command: "chown root:root $apiserverconf"
+          description: "Set API server pod specification file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 1.1.3
@@ -44,6 +54,11 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example, chmod 600 $controllermanagerconf
+        auto_remediation:
+          command: "chmod 600 $controllermanagerconf"
+          description: "Set controller manager pod specification file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 1.1.4
@@ -55,6 +70,11 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example, chown root:root $controllermanagerconf
+        auto_remediation:
+          command: "chown root:root $controllermanagerconf"
+          description: "Set controller manager pod specification file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.5
@@ -69,6 +89,11 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example, chmod 600 $schedulerconf
+        auto_remediation:
+          command: "chmod 600 $schedulerconf"
+          description: "Set scheduler pod specification file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.6
@@ -80,6 +105,11 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example, chown root:root $schedulerconf
+        auto_remediation:
+          command: "chown root:root $schedulerconf"
+          description: "Set scheduler pod specification file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.7
@@ -96,6 +126,11 @@ groups:
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
           chmod 600 $etcdconf
+        auto_remediation:
+          command: "chmod 600 $etcdconf"
+          description: "Set etcd pod specification file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.8
@@ -109,6 +144,11 @@ groups:
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
           chown root:root $etcdconf
+        auto_remediation:
+          command: "chown root:root $etcdconf"
+          description: "Set etcd pod specification file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.9
@@ -125,7 +165,7 @@ groups:
                 value: "600"
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
-          For example, chmod 600 <path/to/cni/files>
+          For example, chmod 600 <path/to/cni/files>     
         scored: false
 
       - id: 1.1.10
@@ -140,7 +180,7 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
-          chown root:root <path/to/cni/files>
+          chown root:root <path/to/cni/files>  
         scored: false
 
       - id: 1.1.11
@@ -163,6 +203,11 @@ groups:
           from the command 'ps -ef | grep etcd'.
           Run the below command (based on the etcd data directory found above). For example,
           chmod 700 /var/lib/etcd
+        auto_remediation:
+          command: "chmod 700 /var/lib/etcd"
+          description: "Set etcd data directory permissions to 700"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.12
@@ -182,6 +227,11 @@ groups:
           from the command 'ps -ef | grep etcd'.
           Run the below command (based on the etcd data directory found above).
           For example, chown etcd:etcd /var/lib/etcd
+        auto_remediation:
+          command: "chown etcd:etcd /var/lib/etcd"
+          description: "Set etcd data directory ownership to etcd:etcd"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.13
@@ -200,6 +250,11 @@ groups:
           For example, chmod 600 /etc/kubernetes/admin.conf
           On Kubernetes 1.29+ the super-admin.conf file should also be modified, if present.
           For example, chmod 600 /etc/kubernetes/super-admin.conf
+        auto_remediation:
+          command: "chmod 600 /etc/kubernetes/admin.conf && chmod 600 /etc/kubernetes/super-admin.conf"
+          description: "Set default administrative credential file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.14
@@ -218,6 +273,11 @@ groups:
           For example, chown root:root /etc/kubernetes/admin.conf
           On Kubernetes 1.29+ the super-admin.conf file should also be modified, if present.
           For example, chown root:root /etc/kubernetes/super-admin.conf
+        auto_remediation:
+          command: "chown root:root /etc/kubernetes/admin.conf"
+          description: "Set default administrative credential file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.15
@@ -233,6 +293,11 @@ groups:
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
           chmod 600 $schedulerkubeconfig
+        auto_remediation:
+          command: "chmod 600 $schedulerkubeconfig"
+          description: "Set scheduler.conf file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.16
@@ -245,6 +310,11 @@ groups:
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
           chown root:root $schedulerkubeconfig
+        auto_remediation:
+          command: "chown root:root $schedulerkubeconfig"
+          description: "Set scheduler.conf file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.17
@@ -260,6 +330,11 @@ groups:
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
           chmod 600 $controllermanagerkubeconfig
+        auto_remediation:
+          command: "chmod 600 $controllermanagerkubeconfig"
+          description: "Set controller-manager.conf file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.18
@@ -272,6 +347,11 @@ groups:
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
           chown root:root $controllermanagerkubeconfig
+        auto_remediation:
+          command: "chown root:root $controllermanagerkubeconfig"
+          description: "Set controller-manager.conf file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.19
@@ -285,6 +365,11 @@ groups:
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
           chown -R root:root /etc/kubernetes/pki/
+        auto_remediation:
+          command: "chown -R root:root /etc/kubernetes/pki/"
+          description: "Set Kubernetes PKI directory and file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.1.20
@@ -300,7 +385,7 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
-          chmod -R 600 /etc/kubernetes/pki/*.crt
+          chmod -R 600 /etc/kubernetes/pki/*.crt       
         scored: false
 
       - id: 1.1.21
@@ -316,7 +401,7 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the control plane node.
           For example,
-          chmod -R 600 /etc/kubernetes/pki/*.key
+          chmod -R 600 /etc/kubernetes/pki/*.key         
         scored: false
 
   - id: 1.2
@@ -348,6 +433,13 @@ groups:
           Follow the documentation and configure alternate mechanisms for authentication. Then,
           edit the API server pod specification file $apiserverconf
           on the control plane node and remove the --token-auth-file=<filename> parameter.
+        auto_remediation:
+          command: |
+            # Remove any --token-auth-file argument regardless of value
+            sed -i '/--token-auth-file[= ][^ ]*/{s/--token-auth-file[= ][^ ]*//g}' "$apiserverconf"
+          description: "Remove --token-auth-file parameter from API server pod specification file (any value)"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 1.2.3
@@ -363,7 +455,7 @@ groups:
         remediation: |
           Edit the API server pod specification file $apiserverconf
           on the control plane node and add the `DenyServiceExternalIPs` plugin
-          to the enabled admission plugins, as such --enable-admission-plugin=DenyServiceExternalIPs.
+          to the enabled admission plugins, as such --enable-admission-plugin=DenyServiceExternalIPs.      
         scored: false
 
       - id: 1.2.4
@@ -381,6 +473,34 @@ groups:
           kubelet client certificate and key parameters as below.
           --kubelet-client-certificate=<path/to/client-certificate-file>
           --kubelet-client-key=<path/to/client-key-file>
+        auto_remediation:
+          command: |
+            certflag=$(grep -E "^[[:space:]]*-[[:space:]]+--kubelet-client-certificate=" "$apiserverconf" | grep -v '^#')
+            keyflag=$(grep -E "^[[:space:]]*-[[:space:]]+--kubelet-client-key=" "$apiserverconf" | grep -v '^#')
+
+            # Kiểm tra trạng thái của cả hai flag
+            [ -z "$certflag" ] && addcert=1 || addcert=0
+            [ -z "$keyflag" ] && addkey=1 || addkey=0
+
+            # Nếu cả hai flag đã tồn tại, thoát
+            if [ $addcert -eq 0 ] && [ $addkey -eq 0 ]; then
+                exit 0
+            fi
+
+            # Sử dụng awk để thêm flag còn thiếu
+            awk -v addcert=$addcert -v addkey=$addkey '
+              /^[[:space:]]*-[[:space:]]*kube-apiserver([[:space:]]|$)/ {
+                print;
+                pad = "    ";
+                if (addcert == 1) print pad "- --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt";
+                if (addkey == 1) print pad "- --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key";
+                next
+              }
+              {print}
+            ' "$apiserverconf" > "$apiserverconf.tmp" && mv "$apiserverconf.tmp" "$apiserverconf"
+          description: "Ensure API server manifest contains --kubelet-client-certificate and --kubelet-client-key (append if missing)"
+          requires_sudo: true
+          dry_run_safe: true         
         scored: true
 
       - id: 1.2.5
@@ -395,6 +515,23 @@ groups:
           $apiserverconf on the control plane node and set the
           --kubelet-certificate-authority parameter to the path to the cert file for the certificate authority.
           --kubelet-certificate-authority=<ca-string>
+        auto_remediation:
+          command: |
+            # Chỉ thêm --kubelet-certificate-authority nếu chưa có
+            if ! grep -q -- "--kubelet-certificate-authority" "$apiserverconf"; then
+              awk '
+                /^[[:space:]]*-[[:space:]]*kube-apiserver([[:space:]]|$)/ {
+                  print;
+                  pad = "    ";
+                  print pad "- --kubelet-certificate-authority=/etc/kubernetes/pki/ca.crt";
+                  next
+                }
+                {print}
+              ' "$apiserverconf" > "$apiserverconf.tmp" && mv "$apiserverconf.tmp" "$apiserverconf"
+            fi
+          description: "Add --kubelet-certificate-authority parameter to API server manifest (if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.6
@@ -411,6 +548,23 @@ groups:
           on the control plane node and set the --authorization-mode parameter to values other than AlwaysAllow.
           One such example could be as below.
           --authorization-mode=RBAC
+        auto_remediation:
+          command: |
+            # Chỉ thay thế nếu có AlwaysAllow và chưa có RBAC
+            if grep -q -- "--authorization-mode.*AlwaysAllow" "$apiserverconf"; then
+              if grep -q -- "--authorization-mode.*RBAC" "$apiserverconf"; then
+                # Đã có RBAC, chỉ xóa AlwaysAllow
+                sed -i 's/--authorization-mode=.*AlwaysAllow.*,RBAC/--authorization-mode=RBAC/' "$apiserverconf"
+                sed -i 's/--authorization-mode=.*RBAC,.*AlwaysAllow.*/--authorization-mode=RBAC/' "$apiserverconf"
+                sed -i 's/--authorization-mode=.*AlwaysAllow.*/--authorization-mode=RBAC/' "$apiserverconf"
+              else
+                # Chưa có RBAC, thay thế hoàn toàn
+                sed -i 's/--authorization-mode=.*AlwaysAllow.*/--authorization-mode=RBAC/' "$apiserverconf"
+              fi
+            fi
+          description: "Remove AlwaysAllow from authorization mode (preserve existing RBAC if present)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.7
@@ -426,6 +580,32 @@ groups:
           Edit the API server pod specification file $apiserverconf
           on the control plane node and set the --authorization-mode parameter to a value that includes Node.
           --authorization-mode=Node,RBAC
+        auto_remediation:
+          command: |
+            # Đảm bảo --authorization-mode có chứa Node (không trùng lặp)
+            if ! grep -q -- "--authorization-mode.*Node" "$apiserverconf"; then
+              if grep -q -- "--authorization-mode" "$apiserverconf"; then
+                # Đã có --authorization-mode, kiểm tra và thêm Node nếu chưa có
+                current_value=$(grep -- "--authorization-mode" "$apiserverconf" | sed 's/.*--authorization-mode=\([^[:space:]]*\).*/\1/')
+                if [[ "$current_value" != *"Node"* ]]; then
+                  sed -i 's/--authorization-mode=/--authorization-mode=Node,/' "$apiserverconf"
+                fi
+              else
+                # Chưa có --authorization-mode, thêm mới với Node,RBAC
+                awk '
+                  /^[[:space:]]*-[[:space:]]*kube-apiserver([[:space:]]|$)/ {
+                    print;
+                    pad = "    ";
+                    print pad "- --authorization-mode=Node,RBAC";
+                    next
+                  }
+                  {print}
+                ' "$apiserverconf" > "$apiserverconf.tmp" && mv "$apiserverconf.tmp" "$apiserverconf"
+              fi
+            fi
+          description: "Ensure --authorization-mode includes Node (add if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.8
@@ -441,7 +621,34 @@ groups:
           Edit the API server pod specification file $apiserverconf
           on the control plane node and set the --authorization-mode parameter to a value that includes RBAC,
           for example `--authorization-mode=Node,RBAC`.
+        auto_remediation:
+          command: |
+            # Đảm bảo --authorization-mode có chứa RBAC (không trùng lặp)
+            if ! grep -q -- "--authorization-mode.*RBAC" "$apiserverconf"; then
+              if grep -q -- "--authorization-mode" "$apiserverconf"; then
+                # Đã có --authorization-mode, kiểm tra và thêm RBAC nếu chưa có
+                current_value=$(grep -- "--authorization-mode" "$apiserverconf" | sed 's/.*--authorization-mode=\([^[:space:]]*\).*/\1/')
+                if [[ "$current_value" != *"RBAC"* ]]; then
+                  sed -i 's/--authorization-mode=\([^[:space:]]*\)/--authorization-mode=\1,RBAC/' "$apiserverconf"
+                fi
+              else
+                # Chưa có --authorization-mode, thêm mới với Node,RBAC
+                awk '
+                  /^[[:space:]]*-[[:space:]]*kube-apiserver([[:space:]]|$)/ {
+                    print;
+                    pad = "    ";
+                    print pad "- --authorization-mode=Node,RBAC";
+                    next
+                  }
+                  {print}
+                ' "$apiserverconf" > "$apiserverconf.tmp" && mv "$apiserverconf.tmp" "$apiserverconf"
+              fi
+            fi
+          description: "Ensure --authorization-mode includes RBAC (add if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
+
 
       - id: 1.2.9
         text: "Ensure that the admission control plugin EventRateLimit is set (Manual)"
@@ -476,6 +683,25 @@ groups:
           Edit the API server pod specification file $apiserverconf
           on the control plane node and either remove the --enable-admission-plugins parameter, or set it to a
           value that does not include AlwaysAdmit.
+        auto_remediation:
+          command: |
+            # Xóa AlwaysAdmit khỏi --enable-admission-plugins (xử lý nhiều trường hợp)
+            if grep -q -- "--enable-admission-plugins.*AlwaysAdmit" "$apiserverconf"; then
+              # Xóa AlwaysAdmit ở đầu danh sách (có dấu phẩy sau)
+              sed -i 's/--enable-admission-plugins=AlwaysAdmit,/--enable-admission-plugins=/' "$apiserverconf"
+              # Xóa AlwaysAdmit ở giữa danh sách (có dấu phẩy trước và sau)
+              sed -i 's/,AlwaysAdmit,/,/' "$apiserverconf"
+              # Xóa AlwaysAdmit ở cuối danh sách (có dấu phẩy trước)
+              sed -i 's/,AlwaysAdmit//' "$apiserverconf"
+              # Xóa AlwaysAdmit là plugin duy nhất - xóa toàn bộ parameter
+              sed -i '/--enable-admission-plugins=AlwaysAdmit$/d' "$apiserverconf"
+              # Dọn dẹp trường hợp còn lại dấu phẩy thừa - xóa toàn bộ parameter
+              sed -i '/--enable-admission-plugins=,/d' "$apiserverconf"
+              sed -i '/--enable-admission-plugins=$/d' "$apiserverconf"
+            fi
+          description: "Remove AlwaysAdmit plugin from enabled admission plugins (remove entire parameter if empty)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.11
@@ -491,7 +717,7 @@ groups:
           Edit the API server pod specification file $apiserverconf
           on the control plane node and set the --enable-admission-plugins parameter to include
           AlwaysPullImages.
-          --enable-admission-plugins=...,AlwaysPullImages,...
+          --enable-admission-plugins=...,AlwaysPullImages,...   
         scored: false
 
       - id: 1.2.12
@@ -511,6 +737,25 @@ groups:
           Then, edit the API server pod specification file $apiserverconf
           on the control plane node and ensure that the --disable-admission-plugins parameter is set to a
           value that does not include ServiceAccount.
+        auto_remediation:
+          command: |
+            # Xóa ServiceAccount khỏi --disable-admission-plugins (xử lý nhiều trường hợp)
+            if grep -q -- "--disable-admission-plugins.*ServiceAccount" "$apiserverconf"; then
+              # Xóa ServiceAccount ở đầu danh sách (có dấu phẩy sau)
+              sed -i 's/--disable-admission-plugins=ServiceAccount,/--disable-admission-plugins=/' "$apiserverconf"
+              # Xóa ServiceAccount ở giữa danh sách (có dấu phẩy trước và sau)
+              sed -i 's/,ServiceAccount,/,/' "$apiserverconf"
+              # Xóa ServiceAccount ở cuối danh sách (có dấu phẩy trước)
+              sed -i 's/,ServiceAccount//' "$apiserverconf"
+              # Xóa ServiceAccount là plugin duy nhất - xóa toàn bộ parameter
+              sed -i '/--disable-admission-plugins=ServiceAccount$/d' "$apiserverconf"
+              # Dọn dẹp trường hợp còn lại dấu phẩy thừa - xóa toàn bộ parameter
+              sed -i '/--disable-admission-plugins=,/d' "$apiserverconf"
+              sed -i '/--disable-admission-plugins=$/d' "$apiserverconf"
+            fi
+          description: "Remove ServiceAccount plugin from disabled admission plugins (remove entire parameter if empty)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.13
@@ -529,6 +774,25 @@ groups:
           Edit the API server pod specification file $apiserverconf
           on the control plane node and set the --disable-admission-plugins parameter to
           ensure it does not include NamespaceLifecycle.
+        auto_remediation:
+          command: |
+            # Xóa NamespaceLifecycle khỏi --disable-admission-plugins (xử lý nhiều trường hợp)
+            if grep -q -- "--disable-admission-plugins.*NamespaceLifecycle" "$apiserverconf"; then
+              # Xóa NamespaceLifecycle ở đầu danh sách (có dấu phẩy sau)
+              sed -i 's/--disable-admission-plugins=NamespaceLifecycle,/--disable-admission-plugins=/' "$apiserverconf"
+              # Xóa NamespaceLifecycle ở giữa danh sách (có dấu phẩy trước và sau)
+              sed -i 's/,NamespaceLifecycle,/,/' "$apiserverconf"
+              # Xóa NamespaceLifecycle ở cuối danh sách (có dấu phẩy trước)
+              sed -i 's/,NamespaceLifecycle//' "$apiserverconf"
+              # Xóa NamespaceLifecycle là plugin duy nhất - xóa toàn bộ parameter
+              sed -i '/--disable-admission-plugins=NamespaceLifecycle$/d' "$apiserverconf"
+              # Dọn dẹp trường hợp còn lại dấu phẩy thừa - xóa toàn bộ parameter
+              sed -i '/--disable-admission-plugins=,/d' "$apiserverconf"
+              sed -i '/--disable-admission-plugins=$/d' "$apiserverconf"
+            fi
+          description: "Remove NamespaceLifecycle plugin from disabled admission plugins (remove entire parameter if empty)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.14
@@ -546,6 +810,29 @@ groups:
           on the control plane node and set the --enable-admission-plugins parameter to a
           value that includes NodeRestriction.
           --enable-admission-plugins=...,NodeRestriction,...
+        auto_remediation:
+          command: |
+            # Thêm NodeRestriction vào --enable-admission-plugins (xử lý nhiều trường hợp)
+            if ! grep -q -- "--enable-admission-plugins.*NodeRestriction" "$apiserverconf"; then
+              if grep -q -- "--enable-admission-plugins" "$apiserverconf"; then
+                # Đã có --enable-admission-plugins, thêm NodeRestriction vào cuối
+                sed -i 's/--enable-admission-plugins=\([^[:space:]]*\)/--enable-admission-plugins=\1,NodeRestriction/' "$apiserverconf"
+              else
+                # Chưa có --enable-admission-plugins, thêm mới với NodeRestriction
+                awk '
+                  /^[[:space:]]*-[[:space:]]*kube-apiserver([[:space:]]|$)/ {
+                    print;
+                    pad = "    ";
+                    print pad "- --enable-admission-plugins=NodeRestriction";
+                    next
+                  }
+                  {print}
+                ' "$apiserverconf" > "$apiserverconf.tmp" && mv "$apiserverconf.tmp" "$apiserverconf"
+              fi
+            fi
+          description: "Add NodeRestriction plugin to enabled admission plugins (if not already present)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.15
@@ -561,6 +848,15 @@ groups:
           Edit the API server pod specification file $apiserverconf
           on the control plane node and set the below parameter.
           --profiling=false
+        auto_remediation:
+          command: |
+            # Remove any existing --profiling lines
+            sed -i '/--profiling/d' "$apiserverconf"
+            # Add --profiling=false at the end of command arguments (before image: line)
+            sed -i '/image:/i\    - --profiling=false' "$apiserverconf"
+          description: "Set --profiling parameter to false at end of command section"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.16
@@ -571,11 +867,108 @@ groups:
             - flag: "--audit-log-path"
         remediation: |
           Edit the API server pod specification file $apiserverconf
-          on the control plane node and set the --audit-log-path parameter to a suitable path and
-          file where you would like audit logs to be written, for example,
-          --audit-log-path=/var/log/apiserver/audit.log
+          on the control plane node and set:
+            --audit-log-path=/var/log/apiserver/audit.log
+          Ensure a hostPath volume is mounted at /var/log/apiserver.
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            
+            APISERVER_CONF="$apiserverconf"
+            AUDIT_DIR="/var/log/apiserver"
+            
+            echo "=== Starting audit-log-path remediation ==="
+            
+            # Check if file exists
+            if [ ! -f "$APISERVER_CONF" ]; then
+              echo "✗ Error: File $APISERVER_CONF does not exist"
+              exit 1
+            fi
+            
+            # Create audit directory
+            mkdir -p "$AUDIT_DIR" 2>/dev/null || sudo mkdir -p "$AUDIT_DIR"
+            echo "✓ Created directory: $AUDIT_DIR"
+            
+            # Step 1: Remove duplicate mountPath entries
+            echo "Removing duplicate mountPath entries..."
+            sudo sed -i '/^[[:space:]]*- mountPath: \/var\/log\/apiserver$/,/^[[:space:]]*name: audit-log$/{
+                /^[[:space:]]*- mountPath: \/var\/log\/apiserver$/!d
+                /^[[:space:]]*name: audit-log$/!d
+            }' "$APISERVER_CONF"
+            echo "✓ Cleaned duplicate entries"
+            
+            # Step 2: Add --audit-log-path parameter at the end of command section
+            if ! grep -q "^[[:space:]]*- --audit-log-path=" "$APISERVER_CONF"; then
+              echo "Adding --audit-log-path parameter..."
+              sudo sed -i '/image:/i\    - --audit-log-path=/var/log/apiserver/audit.log' "$APISERVER_CONF"
+              echo "✓ Added --audit-log-path parameter"
+            else
+              echo "✓ --audit-log-path parameter already exists"
+            fi
+            
+            # Step 3: Add volumeMount if not exists
+            if ! grep -q "name: audit-log" "$APISERVER_CONF"; then
+              echo "Adding volumeMount..."
+              sudo sed -i '/volumeMounts:/a\    - name: audit-log\n      mountPath: /var/log/apiserver' "$APISERVER_CONF"
+              echo "✓ Added volumeMount"
+            else
+              echo "✓ VolumeMount already exists"
+            fi
+            
+            # Step 4: Add volume if not exists
+            if ! grep -A10 "name: audit-log" "$APISERVER_CONF" | grep -q "hostPath:"; then
+              echo "Adding volume..."
+              sudo sed -i '/volumes:/a\  - name: audit-log\n    hostPath:\n      path: /var/log/apiserver\n      type: DirectoryOrCreate' "$APISERVER_CONF"
+              echo "✓ Added volume"
+            else
+              echo "✓ Volume already exists"
+            fi
+            
+            # Step 5: Verification
+            echo ""
+            echo "=== Verification ==="
+            
+            FAIL=0
+            
+            # Check parameter
+            if grep -q "^[[:space:]]*- --audit-log-path=/var/log/apiserver/audit.log" "$APISERVER_CONF"; then
+              echo "✓ Parameter: --audit-log-path is set"
+            else
+              echo "✗ Parameter: FAILED"
+              FAIL=1
+            fi
+            
+            # Check volumeMount
+            if grep -q "mountPath: /var/log/apiserver" "$APISERVER_CONF"; then
+              echo "✓ VolumeMount: Points to directory"
+            else
+              echo "✗ VolumeMount: FAILED"
+              FAIL=1
+            fi
+            
+            # Check volume
+            if grep -A5 "name: audit-log" "$APISERVER_CONF" | grep -q "path: /var/log/apiserver"; then
+              echo "✓ Volume: Path is correct"
+            else
+              echo "✗ Volume: FAILED"
+              FAIL=1
+            fi
+            
+            if [ $FAIL -eq 1 ]; then exit 1; fi
+            
+            echo ""
+            echo "=== SUCCESS ==="
+            echo "Configuration fixed successfully!"
+            echo "Kubelet will restart kube-apiserver pod in 1-2 minutes"
+            
+          description: "Fix audit-log-path configuration using safe file operations"
+          requires_sudo: true
+          dry_run_safe: false
         scored: true
 
+
+# ...existing code...
       - id: 1.2.17
         text: "Ensure that the --audit-log-maxage argument is set to 30 or as appropriate (Automated)"
         audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
@@ -590,6 +983,22 @@ groups:
           on the control plane node and set the --audit-log-maxage parameter to 30
           or as an appropriate number of days, for example,
           --audit-log-maxage=30
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            # If flag exists (not commented), normalize value to 30; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --audit-log-maxage=" "$CONF"; then
+              sed -i 's/^[[:space:]]*- --audit-log-maxage=.*/    - --audit-log-maxage=30/' "$CONF"
+              echo "✓ Updated --audit-log-maxage to 30"
+            else
+              sed -i '/^\s*image:/i\    - --audit-log-maxage=30' "$CONF"
+              echo "✓ Inserted --audit-log-maxage=30"
+            fi
+          description: "Ensure --audit-log-maxage exists and equals 30 (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.18
@@ -606,6 +1015,22 @@ groups:
           on the control plane node and set the --audit-log-maxbackup parameter to 10 or to an appropriate
           value. For example,
           --audit-log-maxbackup=10
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            # If flag exists (not commented), normalize value to 10; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --audit-log-maxbackup=" "$CONF"; then
+              sed -i 's/^[[:space:]]*- --audit-log-maxbackup=.*/    - --audit-log-maxbackup=10/' "$CONF"
+              echo "✓ Updated --audit-log-maxbackup to 10"
+            else
+              sed -i '/^\s*image:/i\    - --audit-log-maxbackup=10' "$CONF"
+              echo "✓ Inserted --audit-log-maxbackup=10"
+            fi
+          description: "Ensure --audit-log-maxbackup exists and equals 10 (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.19
@@ -621,6 +1046,22 @@ groups:
           Edit the API server pod specification file $apiserverconf
           on the control plane node and set the --audit-log-maxsize parameter to an appropriate size in MB.
           For example, to set it as 100 MB, --audit-log-maxsize=100
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            # If flag exists (not commented), normalize value to 100; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --audit-log-maxsize=" "$CONF"; then
+              sed -i 's/^[[:space:]]*- --audit-log-maxsize=.*/    - --audit-log-maxsize=100/' "$CONF"
+              echo "✓ Updated --audit-log-maxsize to 100"
+            else
+              sed -i '/^\s*image:/i\    - --audit-log-maxsize=100' "$CONF"
+              echo "✓ Inserted --audit-log-maxsize=100"
+            fi
+          description: "Ensure --audit-log-maxsize exists and equals 100 (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true      
         scored: true
 
       - id: 1.2.20
@@ -637,10 +1078,7 @@ groups:
         text: "Ensure that the --service-account-lookup argument is set to true (Automated)"
         audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
         tests:
-          bin_op: or
           test_items:
-            - flag: "--service-account-lookup"
-              set: false
             - flag: "--service-account-lookup"
               compare:
                 op: eq
@@ -651,6 +1089,22 @@ groups:
           --service-account-lookup=true
           Alternatively, you can delete the --service-account-lookup parameter from this file so
           that the default takes effect.
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            # If flag exists (not commented), normalize value to true; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --service-account-lookup=" "$CONF"; then
+              sed -i 's/^[[:space:]]*- --service-account-lookup=.*/    - --service-account-lookup=true/' "$CONF"
+              echo "✓ Updated --service-account-lookup to true"
+            else
+              sed -i '/^\s*image:/i\    - --service-account-lookup=true' "$CONF"
+              echo "✓ Inserted --service-account-lookup=true"
+            fi
+          description: "Ensure --service-account-lookup exists and equals true (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.22
@@ -664,6 +1118,27 @@ groups:
           on the control plane node and set the --service-account-key-file parameter
           to the public key file for service accounts. For example,
           --service-account-key-file=<filename>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            TARGET="/etc/kubernetes/pki/sa.pub"
+            # Ensure the file exists (best effort notify)
+            if [ ! -f "$TARGET" ]; then
+              echo "⚠ $TARGET not found; ensure your cluster uses this default path"
+            fi
+            # If flag exists (not commented), normalize to TARGET; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --service-account-key-file=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --service-account-key-file=.*|    - --service-account-key-file=$TARGET|" "$CONF"
+              echo "✓ Updated --service-account-key-file to $TARGET"
+            else
+              sed -i "/^\s*image:/i\    - --service-account-key-file=$TARGET" "$CONF"
+              echo "✓ Inserted --service-account-key-file=$TARGET"
+            fi
+          description: "Ensure --service-account-key-file is set to /etc/kubernetes/pki/sa.pub (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.23
@@ -680,6 +1155,31 @@ groups:
           on the control plane node and set the etcd certificate and key file parameters.
           --etcd-certfile=<path/to/client-certificate-file>
           --etcd-keyfile=<path/to/client-key-file>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            CONF="$apiserverconf"
+            CERT="/etc/kubernetes/pki/apiserver-etcd-client.crt"
+            KEY="/etc/kubernetes/pki/apiserver-etcd-client.key"
+            # Normalize or insert --etcd-certfile
+            if grep -qE "^[[:space:]]*- --etcd-certfile=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --etcd-certfile=.*|    - --etcd-certfile=$CERT|" "$CONF"
+              echo "✓ Updated --etcd-certfile to $CERT"
+            else
+              sed -i '/^\s*image:/i\    - --etcd-certfile='/"$CERT" "$CONF"
+              echo "✓ Inserted --etcd-certfile=$CERT"
+            fi
+            # Normalize or insert --etcd-keyfile
+            if grep -qE "^[[:space:]]*- --etcd-keyfile=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --etcd-keyfile=.*|    - --etcd-keyfile=$KEY|" "$CONF"
+              echo "✓ Updated --etcd-keyfile to $KEY"
+            else
+              sed -i '/^\s*image:/i\    - --etcd-keyfile='/"$KEY" "$CONF"
+              echo "✓ Inserted --etcd-keyfile=$KEY"
+            fi
+          description: "Ensure --etcd-certfile and --etcd-keyfile are set to apiserver-etcd-client cert/key (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.24
@@ -696,6 +1196,32 @@ groups:
           on the control plane node and set the TLS certificate and private key file parameters.
           --tls-cert-file=<path/to/tls-certificate-file>
           --tls-private-key-file=<path/to/tls-key-file>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            CERT="/etc/kubernetes/pki/apiserver.crt"
+            KEY="/etc/kubernetes/pki/apiserver.key"
+            # Normalize or insert --tls-cert-file
+            if grep -qE "^[[:space:]]*- --tls-cert-file=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --tls-cert-file=.*|    - --tls-cert-file=$CERT|" "$CONF"
+              echo "✓ Updated --tls-cert-file to $CERT"
+            else
+              sed -i '/^\s*image:/i\    - --tls-cert-file='"$CERT" "$CONF"
+              echo "✓ Inserted --tls-cert-file=$CERT"
+            fi
+            # Normalize or insert --tls-private-key-file
+            if grep -qE "^[[:space:]]*- --tls-private-key-file=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --tls-private-key-file=.*|    - --tls-private-key-file=$KEY|" "$CONF"
+              echo "✓ Updated --tls-private-key-file to $KEY"
+            else
+              sed -i '/^\s*image:/i\    - --tls-private-key-file='"$KEY" "$CONF"
+              echo "✓ Inserted --tls-private-key-file=$KEY"
+            fi
+          description: "Ensure --tls-cert-file and --tls-private-key-file are set to apiserver cert/key (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.25
@@ -709,6 +1235,23 @@ groups:
           Then, edit the API server pod specification file $apiserverconf
           on the control plane node and set the client certificate authority file.
           --client-ca-file=<path/to/client-ca-file>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            CA="/etc/kubernetes/pki/ca.crt"
+            # Normalize existing or insert new --client-ca-file before image:
+            if grep -qE "^[[:space:]]*- --client-ca-file=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --client-ca-file=.*|    - --client-ca-file=$CA|" "$CONF"
+              echo "✓ Updated --client-ca-file to $CA"
+            else
+              sed -i '/^\s*image:/i\    - --client-ca-file='"$CA" "$CONF"
+              echo "✓ Inserted --client-ca-file=$CA"
+            fi
+          description: "Ensure --client-ca-file is set to /etc/kubernetes/pki/ca.crt (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.26
@@ -722,6 +1265,23 @@ groups:
           Then, edit the API server pod specification file $apiserverconf
           on the control plane node and set the etcd certificate authority file parameter.
           --etcd-cafile=<path/to/ca-file>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$apiserverconf"
+            CA="/etc/kubernetes/pki/etcd/ca.crt"
+            # Normalize existing or insert new --etcd-cafile before image:
+            if grep -qE "^[[:space:]]*- --etcd-cafile=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --etcd-cafile=.*|    - --etcd-cafile=$CA|" "$CONF"
+              echo "✓ Updated --etcd-cafile to $CA"
+            else
+              sed -i '/^\s*image:/i\    - --etcd-cafile='"$CA" "$CONF"
+              echo "✓ Inserted --etcd-cafile=$CA"
+            fi
+          description: "Ensure --etcd-cafile is set to /etc/kubernetes/pki/etcd/ca.crt (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.2.27
@@ -734,7 +1294,7 @@ groups:
           Follow the Kubernetes documentation and configure a EncryptionConfig file.
           Then, edit the API server pod specification file $apiserverconf
           on the control plane node and set the --encryption-provider-config parameter to the path of that file.
-          For example, --encryption-provider-config=</path/to/EncryptionConfig/File>
+          For example, --encryption-provider-config=</path/to/EncryptionConfig/File>        
         scored: false
 
       - id: 1.2.28
@@ -750,7 +1310,7 @@ groups:
                 value: "aescbc,kms,secretbox"
         remediation: |
           Follow the Kubernetes documentation and configure a EncryptionConfig file.
-          In this file, choose aescbc, kms or secretbox as the encryption provider.
+          In this file, choose aescbc, kms or secretbox as the encryption provider.  
         scored: false
 
       - id: 1.2.29
@@ -770,7 +1330,7 @@ groups:
           TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
           TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
           TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-          TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+          TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256        
         scored: false
 
   - id: 1.3
@@ -785,7 +1345,7 @@ groups:
         remediation: |
           Edit the Controller Manager pod specification file $controllermanagerconf
           on the control plane node and set the --terminated-pod-gc-threshold to an appropriate threshold,
-          for example, --terminated-pod-gc-threshold=10
+          for example, --terminated-pod-gc-threshold=10   
         scored: false
 
       - id: 1.3.2
@@ -801,6 +1361,22 @@ groups:
           Edit the Controller Manager pod specification file $controllermanagerconf
           on the control plane node and set the below parameter.
           --profiling=false
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$controllermanagerconf"
+            # If flag exists (not commented), normalize value to false; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --profiling=" "$CONF"; then
+              sed -i 's/^[[:space:]]*- --profiling=.*/    - --profiling=false/' "$CONF"
+              echo "✓ Updated --profiling=false"
+            else
+              sed -i '/^\s*image:/i\    - --profiling=false' "$CONF"
+              echo "✓ Inserted --profiling=false"
+            fi
+          description: "Ensure --profiling=false is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.3.3
@@ -816,6 +1392,22 @@ groups:
           Edit the Controller Manager pod specification file $controllermanagerconf
           on the control plane node to set the below parameter.
           --use-service-account-credentials=true
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$controllermanagerconf"
+            # If flag exists (not commented), normalize value to true; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --use-service-account-credentials=" "$CONF"; then
+              sed -i 's/^[[:space:]]*- --use-service-account-credentials=.*/    - --use-service-account-credentials=true/' "$CONF"
+              echo "✓ Updated --use-service-account-credentials=true"
+            else
+              sed -i '/^\s*image:/i\    - --use-service-account-credentials=true' "$CONF"
+              echo "✓ Inserted --use-service-account-credentials=true"
+            fi
+          description: "Ensure --use-service-account-credentials=true is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.3.4
@@ -829,6 +1421,23 @@ groups:
           on the control plane node and set the --service-account-private-key-file parameter
           to the private key file for service accounts.
           --service-account-private-key-file=<filename>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$controllermanagerconf"
+            KEY_FILE="/etc/kubernetes/pki/sa.key"
+            # If flag exists (not commented), normalize value; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --service-account-private-key-file=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --service-account-private-key-file=.*|    - --service-account-private-key-file=$KEY_FILE|" "$CONF"
+              echo "✓ Updated --service-account-private-key-file=$KEY_FILE"
+            else
+              sed -i "/^\s*image:/i\\    - --service-account-private-key-file=$KEY_FILE" "$CONF"
+              echo "✓ Inserted --service-account-private-key-file=$KEY_FILE"
+            fi
+          description: "Ensure --service-account-private-key-file=/etc/kubernetes/pki/sa.key is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.3.5
@@ -841,42 +1450,92 @@ groups:
           Edit the Controller Manager pod specification file $controllermanagerconf
           on the control plane node and set the --root-ca-file parameter to the certificate bundle file`.
           --root-ca-file=<path/to/file>
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$controllermanagerconf"
+            CA_FILE="/etc/kubernetes/pki/ca.crt"
+            # If flag exists (not commented), normalize value; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --root-ca-file=" "$CONF"; then
+              sed -i "s|^[[:space:]]*- --root-ca-file=.*|    - --root-ca-file=$CA_FILE|" "$CONF"
+              echo "✓ Updated --root-ca-file=$CA_FILE"
+            else
+              sed -i "/^\s*image:/i\\    - --root-ca-file=$CA_FILE" "$CONF"
+              echo "✓ Inserted --root-ca-file=$CA_FILE"
+            fi
+          description: "Ensure --root-ca-file=/etc/kubernetes/pki/ca.crt is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.3.6
         text: "Ensure that the RotateKubeletServerCertificate argument is set to true (Automated)"
         audit: "/bin/ps -ef | grep $controllermanagerbin | grep -v grep"
         tests:
-          bin_op: or
           test_items:
             - flag: "--feature-gates"
               compare:
-                op: nothave
-                value: "RotateKubeletServerCertificate=false"
-              set: true
-            - flag: "--feature-gates"
-              set: false
+                op: has
+                value: "RotateKubeletServerCertificate=true"
         remediation: |
           Edit the Controller Manager pod specification file $controllermanagerconf
           on the control plane node and set the --feature-gates parameter to include RotateKubeletServerCertificate=true.
           --feature-gates=RotateKubeletServerCertificate=true
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$controllermanagerconf"
+            echo "=== Remediating 1.3.6: RotateKubeletServerCertificate ==="
+            # Check if --feature-gates already exists
+            if grep -qE "^[[:space:]]*- --feature-gates=" "$CONF"; then
+              # Update existing feature-gates
+              if grep -q "RotateKubeletServerCertificate=true" "$CONF"; then
+                echo "✓ RotateKubeletServerCertificate=true already present"
+              else
+                # Add RotateKubeletServerCertificate=true to existing feature-gates
+                sed -i 's/--feature-gates=\([^[:space:]]*\)/--feature-gates=\1,RotateKubeletServerCertificate=true/' "$CONF"
+                echo "✓ Added RotateKubeletServerCertificate=true to existing --feature-gates"
+              fi
+            else
+              # Insert new --feature-gates line before image:
+              sed -i "/^\s*image:/i\\    - --feature-gates=RotateKubeletServerCertificate=true" "$CONF"
+              echo "✓ Inserted --feature-gates=RotateKubeletServerCertificate=true"
+            fi
+          description: "Ensure --feature-gates includes RotateKubeletServerCertificate=true"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.3.7
         text: "Ensure that the --bind-address argument is set to 127.0.0.1 (Automated)"
         audit: "/bin/ps -ef | grep $controllermanagerbin | grep -v grep"
         tests:
-          bin_op: or
           test_items:
             - flag: "--bind-address"
               compare:
                 op: eq
                 value: "127.0.0.1"
-            - flag: "--bind-address"
-              set: false
         remediation: |
           Edit the Controller Manager pod specification file $controllermanagerconf
           on the control plane node and ensure the correct value for the --bind-address parameter
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$controllermanagerconf"
+            # If flag exists (not commented), normalize value; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --bind-address=" "$CONF"; then
+              sed -i 's|^[[:space:]]*- --bind-address=.*|    - --bind-address=127.0.0.1|' "$CONF"
+              echo "✓ Updated --bind-address=127.0.0.1"
+            else
+              sed -i '/^\s*image:/i\    - --bind-address=127.0.0.1' "$CONF"
+              echo "✓ Inserted --bind-address=127.0.0.1"
+            fi
+          description: "Ensure --bind-address=127.0.0.1 is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
   - id: 1.4
@@ -895,21 +1554,50 @@ groups:
           Edit the Scheduler pod specification file $schedulerconf file
           on the control plane node and set the below parameter.
           --profiling=false
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$schedulerconf"
+            # If flag exists (not commented), normalize value to false; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --profiling=" "$CONF"; then
+              sed -i 's/^[[:space:]]*- --profiling=.*/    - --profiling=false/' "$CONF"
+              echo "✓ Updated --profiling=false"
+            else
+              sed -i '/^\s*image:/i\    - --profiling=false' "$CONF"
+              echo "✓ Inserted --profiling=false"
+            fi
+          description: "Ensure --profiling=false is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true
 
       - id: 1.4.2
         text: "Ensure that the --bind-address argument is set to 127.0.0.1 (Automated)"
         audit: "/bin/ps -ef | grep $schedulerbin | grep -v grep"
         tests:
-          bin_op: or
           test_items:
             - flag: "--bind-address"
               compare:
                 op: eq
                 value: "127.0.0.1"
-            - flag: "--bind-address"
-              set: false
         remediation: |
           Edit the Scheduler pod specification file $schedulerconf
           on the control plane node and ensure the correct value for the --bind-address parameter
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            set -e
+            CONF="$schedulerconf"
+            # If flag exists (not commented), normalize value; otherwise insert before image:
+            if grep -qE "^[[:space:]]*- --bind-address=" "$CONF"; then
+              sed -i 's|^[[:space:]]*- --bind-address=.*|    - --bind-address=127.0.0.1|' "$CONF"
+              echo "✓ Updated --bind-address=127.0.0.1"
+            else
+              sed -i '/^\s*image:/i\    - --bind-address=127.0.0.1' "$CONF"
+              echo "✓ Inserted --bind-address=127.0.0.1"
+            fi
+          description: "Ensure --bind-address=127.0.0.1 is present (insert if missing)"
+          requires_sudo: true
+          dry_run_safe: true          
         scored: true

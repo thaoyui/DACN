@@ -243,6 +243,34 @@ class YAMLParser:
         
         return True, "Valid test item"
     
+    def _validate_auto_remediation(self, auto_remediation: Dict[str, Any], check_id: str) -> Tuple[bool, str]:
+        """Validate auto remediation structure"""
+        if not isinstance(auto_remediation, dict):
+            return False, f"Auto remediation in check {check_id} must be a dictionary"
+        
+        # Check required fields
+        required_fields = ['command']
+        for field in required_fields:
+            if field not in auto_remediation:
+                return False, f"Auto remediation in check {check_id} must have '{field}' field"
+        
+        # Validate command is a string
+        if not isinstance(auto_remediation['command'], str):
+            return False, f"Auto remediation command in check {check_id} must be a string"
+        
+        # Validate optional fields
+        optional_fields = ['description', 'requires_sudo', 'dry_run_safe']
+        for field in optional_fields:
+            if field in auto_remediation:
+                if field == 'requires_sudo' and not isinstance(auto_remediation[field], bool):
+                    return False, f"Auto remediation requires_sudo in check {check_id} must be boolean"
+                elif field == 'dry_run_safe' and not isinstance(auto_remediation[field], bool):
+                    return False, f"Auto remediation dry_run_safe in check {check_id} must be boolean"
+                elif field == 'description' and not isinstance(auto_remediation[field], str):
+                    return False, f"Auto remediation description in check {check_id} must be string"
+        
+        return True, "Valid auto remediation"
+    
     def parse_check(self, check: Dict[str, Any]) -> Dict[str, Any]:
         """Enhanced check parsing supporting all kube-bench patterns"""
         parsed = {
@@ -253,6 +281,7 @@ class YAMLParser:
             'audit_env': check.get('audit_env'),        # Support for environment variable checks
             'tests': check.get('tests', {}),
             'remediation': check.get('remediation', 'No remediation provided'),
+            'auto_remediation': check.get('auto_remediation'),  # Support for auto remediation
             'scored': check.get('scored', True),
             'type': check.get('type', 'automated'),
             'use_multiple_values': check.get('use_multiple_values', False)
@@ -261,6 +290,13 @@ class YAMLParser:
         # Normalize tests structure
         if parsed['tests']:
             parsed['tests'] = self._normalize_tests(parsed['tests'])
+        
+        # Validate auto remediation if present
+        if parsed['auto_remediation']:
+            validation_result = self._validate_auto_remediation(parsed['auto_remediation'], parsed['id'])
+            if not validation_result[0]:
+                self.logger.warning(f"Invalid auto remediation in check {parsed['id']}: {validation_result[1]}")
+                parsed['auto_remediation'] = None  # Remove invalid auto remediation
         
         # Handle special cases for manual checks
         if parsed['type'] == 'manual':

@@ -30,11 +30,11 @@ class Colors:
 class Logger:
     """Simple logging utility"""
     
-    def __init__(self, name: str, level: str = 'INFO'):
+    def __init__(self, name: str, level: str = 'INFO', enable_file_logging: bool = False):
         self.logger = logging.getLogger(name)
-        self.setup_logging(level)
+        self.setup_logging(level, enable_file_logging)
     
-    def setup_logging(self, level: str):
+    def setup_logging(self, level: str, enable_file_logging: bool = False):
         """Setup logging with both file and console handlers"""
         log_level = getattr(logging, level.upper(), logging.INFO)
         
@@ -50,21 +50,24 @@ class Logger:
             '%(levelname)s - %(message)s'
         )
         
-        # File handler
-        log_file = Path('logs') / 'kube-bench.log'
-        log_file.parent.mkdir(exist_ok=True)
-        
-        file_handler = logging.FileHandler(log_file, mode='a')
-        file_handler.setLevel(log_level)
-        file_handler.setFormatter(file_formatter)
+        # File handler (optional)
+        if enable_file_logging:
+            try:
+                log_file = Path('logs') / 'kube-bench.log'
+                log_file.parent.mkdir(exist_ok=True)
+                
+                file_handler = logging.FileHandler(log_file, mode='a')
+                file_handler.setLevel(log_level)
+                file_handler.setFormatter(file_formatter)
+                self.logger.addHandler(file_handler)
+            except Exception as e:
+                # If file logging fails, continue with console only
+                pass
         
         # Console handler
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(log_level)
         console_handler.setFormatter(console_formatter)
-        
-        # Add handlers
-        self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
     
     def debug(self, message: str):
