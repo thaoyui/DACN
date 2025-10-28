@@ -18,6 +18,11 @@ groups:
         remediation: |
           Run the below command (based on the file location on your system) on the each worker node.
           For example, chmod 600 $kubeletsvc
+        auto_remediation:
+          command: "chmod 600 $kubeletsvc"
+          description: "Set kubelet service file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 4.1.2
@@ -32,6 +37,11 @@ groups:
           Run the below command (based on the file location on your system) on the each worker node.
           For example,
           chown root:root $kubeletsvc
+        auto_remediation:
+          command: "chown root:root $kubeletsvc"
+          description: "Set kubelet service file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 4.1.3
@@ -76,6 +86,11 @@ groups:
           Run the below command (based on the file location on your system) on the each worker node.
           For example,
           chmod 600 $kubeletkubeconfig
+        auto_remediation:
+          command: "chmod 600 $kubeletkubeconfig"
+          description: "Set kubelet kubeconfig file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 4.1.6
@@ -88,6 +103,11 @@ groups:
           Run the below command (based on the file location on your system) on the each worker node.
           For example,
           chown root:root $kubeletkubeconfig
+        auto_remediation:
+          command: "chown root:root $kubeletkubeconfig"
+          description: "Set kubelet kubeconfig file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 4.1.7
@@ -136,6 +156,11 @@ groups:
         remediation: |
           Run the following command (using the config file location identified in the Audit step)
           chmod 600 $kubeletconf
+        auto_remediation:
+          command: "chmod 600 $kubeletconf"
+          description: "Set kubelet config.yaml file permissions to 600"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
       - id: 4.1.10
@@ -147,6 +172,11 @@ groups:
         remediation: |
           Run the following command (using the config file location identified in the Audit step)
           chown root:root $kubeletconf
+        auto_remediation:
+          command: "chown root:root $kubeletconf"
+          description: "Set kubelet config.yaml file ownership to root:root"
+          requires_sudo: true
+          dry_run_safe: true
         scored: true
 
   - id: 4.2
@@ -173,6 +203,55 @@ groups:
           Based on your system, restart the kubelet service. For example,
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            # Check if using config file or service file
+            if [ -f "$kubeletconf" ]; then
+              # Update config file - handle YAML structure properly
+              # First, remove any existing anonymous section completely
+              if grep -q "anonymous:" "$kubeletconf"; then
+                # Create a backup first
+                cp "$kubeletconf" "$kubeletconf.backup"
+                # Use awk to remove anonymous section and all its nested properties
+                awk '
+                BEGIN { skip = 0; indent_level = 0 }
+                /^[[:space:]]*anonymous:/ { 
+                    skip = 1
+                    indent_level = length($0) - length($1)
+                    next 
+                }
+                skip && /^[[:space:]]*[a-zA-Z-][^:]*:/ {
+                    current_indent = length($0) - length($1)
+                    if (current_indent <= indent_level) {
+                        skip = 0
+                    }
+                }
+                !skip { print }
+                ' "$kubeletconf" > "$kubeletconf.tmp" && mv "$kubeletconf.tmp" "$kubeletconf"
+              fi
+              
+              # Now add the correct anonymous section
+              if grep -q "authentication:" "$kubeletconf"; then
+                # Add anonymous section after authentication
+                sed -i '/authentication:/a\  anonymous:\n    enabled: false' "$kubeletconf"
+              else
+                # Add both authentication and anonymous sections
+                echo "authentication:" >> "$kubeletconf"
+                echo "  anonymous:" >> "$kubeletconf"
+                echo "    enabled: false" >> "$kubeletconf"
+              fi
+            else
+              # Update service file
+              if [ -f "$kubeletsvc" ]; then
+                sed -i 's/KUBELET_SYSTEM_PODS_ARGS="/KUBELET_SYSTEM_PODS_ARGS="--anonymous-auth=false /' "$kubeletsvc"
+              fi
+            fi
+            # Restart kubelet service
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Set --anonymous-auth=false in kubelet configuration"
+          requires_sudo: true
+          dry_run_safe: false
         scored: true
 
       - id: 4.2.2
@@ -195,7 +274,66 @@ groups:
           Based on your system, restart the kubelet service. For example,
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            
+            # Kiểm tra xem authorization section có tồn tại không
+            if grep -q "authorization:" "$kubeletconf"; then
+              # Authorization section tồn tại, kiểm tra mode
+              if grep -q "mode:" "$kubeletconf"; then
+                # Lấy giá trị mode hiện tại
+                current_mode=$(grep -A 1 "authorization:" "$kubeletconf" | grep "mode:" | sed 's/.*mode:[[:space:]]*//' | tr -d '"' | tr -d "'")
+                
+                # Kiểm tra nếu có AlwaysAllow
+                if echo "$current_mode" | grep -q "AlwaysAllow"; then
+                  # Xóa AlwaysAllow và các dấu phẩy/khoảng trắng thừa
+                  new_mode=$(echo "$current_mode" | sed 's/AlwaysAllow//g' | sed 's/,\s*,/,/g' | sed 's/^\s*,\s*//g' | sed 's/,\s*$//g' | sed 's/\s\+/ /g' | xargs)
+                  
+                  # Kiểm tra nếu không có Webhook thì thêm vào
+                  if ! echo "$new_mode" | grep -qi "Webhook"; then
+                    if [ -z "$new_mode" ]; then
+                      new_mode="Webhook"
+                    else
+                      new_mode="Webhook, $new_mode"
+                    fi
+                  fi
+                  
+                  # Nếu mode rỗng sau khi xóa AlwaysAllow, set thành Webhook
+                  if [ -z "$new_mode" ]; then
+                    new_mode="Webhook"
+                  fi
+                  
+                  # Thay thế mode trong file
+                  sed -i "/^[[:space:]]*mode:/c\  mode: $new_mode" "$kubeletconf"
+                else
+                  # Không có AlwaysAllow, chỉ kiểm tra xem có Webhook chưa
+                  if ! echo "$current_mode" | grep -qi "Webhook"; then
+                    if [ -z "$current_mode" ] || [ "$current_mode" = "null" ]; then
+                      new_mode="Webhook"
+                    else
+                      new_mode="Webhook, $current_mode"
+                    fi
+                    sed -i "/^[[:space:]]*mode:/c\  mode: $new_mode" "$kubeletconf"
+                  fi
+                fi
+              else
+                # Có authorization nhưng không có mode, thêm mode: Webhook
+                sed -i '/^authorization:/a\  mode: Webhook' "$kubeletconf"
+              fi
+            else
+              # Không có authorization section, thêm mới
+              sed -i '/^apiVersion:/a\authorization:\n  mode: Webhook' "$kubeletconf"
+            fi
+            
+            # Restart kubelet service
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Remove AlwaysAllow and ensure Webhook is set in authorization.mode"
+          requires_sudo: true
+          dry_run_safe: false
         scored: true
+
 
       - id: 4.2.3
         text: "Ensure that the --client-ca-file argument is set as appropriate (Automated)"
@@ -215,6 +353,33 @@ groups:
           Based on your system, restart the kubelet service. For example,
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            # Check if using config file or service file
+            if [ -f "$kubeletconf" ]; then
+              # Update config file - handle YAML structure properly
+              if grep -q "authentication:" "$kubeletconf"; then
+                # Check if x509 section exists
+                if grep -q "x509:" "$kubeletconf"; then
+                  # Update existing clientCAFile
+                  sed -i 's/clientCAFile:.*/clientCAFile: \/etc\/kubernetes\/pki\/ca.crt/' "$kubeletconf"
+                else
+                  # Add x509 section after authentication
+                  sed -i '/authentication:/a\  x509:\n    clientCAFile: /etc/kubernetes/pki/ca.crt' "$kubeletconf"
+                fi
+              else
+                # Add authentication section with x509
+                sed -i '/^apiVersion:/a\authentication:\n  x509:\n    clientCAFile: /etc/kubernetes/pki/ca.crt' "$kubeletconf"
+              fi
+            else
+              # Update service file
+              sed -i 's/KUBELET_AUTHZ_ARGS="/KUBELET_AUTHZ_ARGS="--client-ca-file=/etc/kubernetes/pki/ca.crt /' "$kubeletsvc"
+            fi
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Set --client-ca-file in kubelet configuration"
+          requires_sudo: true
+          dry_run_safe: false
         scored: true
 
       - id: 4.2.4
@@ -294,6 +459,23 @@ groups:
           Based on your system, restart the kubelet service. For example:
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            KUBELET_CONFIG="${kubeletconf:-/var/lib/kubelet/config.yaml}"
+            
+            # Chỉ remediate nếu explicitly set false
+            if grep -q "^makeIPTablesUtilChains: false" "$KUBELET_CONFIG"; then
+              echo "Remediating makeIPTablesUtilChains: false -> true"
+              sed -i 's/^makeIPTablesUtilChains: false/makeIPTablesUtilChains: true/' "$KUBELET_CONFIG"
+              systemctl daemon-reload
+              systemctl restart kubelet.service
+            else
+              echo "No remediation needed - already compliant"
+            fi
+          description: "Set makeIPTablesUtilChains to true if explicitly set to false"
+          requires_sudo: true
+          dry_run_safe: false
         scored: true
 
       - id: 4.2.7
@@ -313,6 +495,15 @@ groups:
           Based on your system, restart the kubelet service. For example,
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            # Remove --hostname-override argument from service file
+            sed -i 's/--hostname-override[^ ]*//g' "$kubeletsvc"
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Remove --hostname-override argument from kubelet service file"
+          requires_sudo: true
+          dry_run_safe: false
         scored: false
 
       - id: 4.2.8
@@ -338,6 +529,21 @@ groups:
           Based on your system, restart the kubelet service. For example,
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            # Check if using config file or service file
+            if [ -f "$kubeletconf" ]; then
+              # Update config file
+              sed -i 's/eventRecordQPS:/eventRecordQPS: 5/' "$kubeletconf"
+            else
+              # Update service file
+              sed -i 's/KUBELET_SYSTEM_PODS_ARGS="/KUBELET_SYSTEM_PODS_ARGS="--event-qps=5 /' "$kubeletsvc"
+            fi
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Set --event-qps=5 in kubelet configuration"
+          requires_sudo: true
+          dry_run_safe: false
         scored: false
 
       - id: 4.2.9
@@ -362,6 +568,22 @@ groups:
           Based on your system, restart the kubelet service. For example,
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            # Check if using config file or service file
+            if [ -f "$kubeletconf" ]; then
+              # Update config file
+              sed -i 's/tlsCertFile:/tlsCertFile: /var/lib/kubelet/pki/kubelet.crt/' "$kubeletconf"
+              sed -i 's/tlsPrivateKeyFile:/tlsPrivateKeyFile: /var/lib/kubelet/pki/kubelet.key/' "$kubeletconf"
+            else
+              # Update service file
+              sed -i 's/KUBELET_CERTIFICATE_ARGS="/KUBELET_CERTIFICATE_ARGS="--tls-cert-file=/var/lib/kubelet/pki/kubelet.crt --tls-private-key-file=/var/lib/kubelet/pki/kubelet.key /' "$kubeletsvc"
+            fi
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Set TLS certificate and private key file paths in kubelet configuration"
+          requires_sudo: true
+          dry_run_safe: false
         scored: false
 
       - id: 4.2.10
@@ -375,12 +597,8 @@ groups:
               compare:
                 op: eq
                 value: true
-            - flag: --rotate-certificates
-              path: "{.rotateCertificates}"
-              set: false
-          bin_op: or
         remediation: |
-          If using a Kubelet config file, edit the file to add the line `rotateCertificates` to `true` or
+          If using a Kubelet config file, edit the file to add the line rotateCertificates: true or
           remove it altogether to use the default value.
           If using command line arguments, edit the kubelet service file
           $kubeletsvc on each worker node and
@@ -389,7 +607,29 @@ groups:
           Based on your system, restart the kubelet service. For example,
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            #!/bin/bash
+            KUBELET_CONFIG="${kubeletconf:-/var/lib/kubelet/config.yaml}"
+            
+            if grep -q "^rotateCertificates:" "$KUBELET_CONFIG"; then
+              CURRENT_VALUE=$(grep "^rotateCertificates:" "$KUBELET_CONFIG" | awk '{print $2}')
+              if [ "$CURRENT_VALUE" != "true" ]; then
+                sed -i "s/^rotateCertificates:.*$/rotateCertificates: true/" "$KUBELET_CONFIG"
+                systemctl daemon-reload
+                systemctl restart kubelet.service
+              fi
+            else
+              sed -i '/^apiVersion:.*/a rotateCertificates: true' "$KUBELET_CONFIG"
+              systemctl daemon-reload
+              systemctl restart kubelet.service
+            fi
+          description: "Set rotateCertificates to true"
+          requires_sudo: true
+          dry_run_safe: false
         scored: true
+        
+                
 
       - id: 4.2.11
         text: "Verify that the RotateKubeletServerCertificate argument is set to true (Manual)"
@@ -413,6 +653,21 @@ groups:
           Based on your system, restart the kubelet service. For example:
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            # Check if using config file or service file
+            if [ -f "$kubeletconf" ]; then
+              # Update config file
+              sed -i 's/featureGates:/featureGates:\n  RotateKubeletServerCertificate: true/' "$kubeletconf"
+            else
+              # Update service file
+              sed -i 's/KUBELET_CERTIFICATE_ARGS="/KUBELET_CERTIFICATE_ARGS="--feature-gates=RotateKubeletServerCertificate=true /' "$kubeletsvc"
+            fi
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Set RotateKubeletServerCertificate feature gate to true in kubelet configuration"
+          requires_sudo: true
+          dry_run_safe: false
         scored: false
 
       - id: 4.2.12
@@ -443,6 +698,22 @@ groups:
           Based on your system, restart the kubelet service. For example:
           systemctl daemon-reload
           systemctl restart kubelet.service
+        auto_remediation:
+          command: |
+            CIPHER_SUITES="TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256"
+            # Check if using config file or service file
+            if [ -f "$kubeletconf" ]; then
+              # Update config file
+              sed -i "s/tlsCipherSuites:/tlsCipherSuites: [$CIPHER_SUITES]/" "$kubeletconf"
+            else
+              # Update service file
+              sed -i "s/KUBELET_SYSTEM_PODS_ARGS="/KUBELET_SYSTEM_PODS_ARGS="--tls-cipher-suites=$CIPHER_SUITES /" "$kubeletsvc"
+            fi
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Set strong TLS cipher suites in kubelet configuration"
+          requires_sudo: true
+          dry_run_safe: false
         scored: false
 
       - id: 4.2.13
@@ -456,6 +727,21 @@ groups:
         remediation: |
           Decide on an appropriate level for this parameter and set it,
           either via the --pod-max-pids command line parameter or the PodPidsLimit configuration file setting.
+        auto_remediation:
+          command: |
+            # Check if using config file or service file
+            if [ -f "$kubeletconf" ]; then
+              # Update config file
+              sed -i 's/podPidsLimit:/podPidsLimit: 1000/' "$kubeletconf"
+            else
+              # Update service file
+              sed -i 's/KUBELET_SYSTEM_PODS_ARGS="/KUBELET_SYSTEM_PODS_ARGS="--pod-max-pids=1000 /' "$kubeletsvc"
+            fi
+            systemctl daemon-reload
+            systemctl restart kubelet.service
+          description: "Set pod PIDs limit to 1000 in kubelet configuration"
+          requires_sudo: true
+          dry_run_safe: false
         scored: false
 
   - id: 4.3
@@ -479,4 +765,19 @@ groups:
         remediation: |
           Modify or remove any values which bind the metrics service to a non-localhost address.
           The default value is 127.0.0.1:10249.
+        auto_remediation:
+          command: |
+            # Check if using config file or service file
+            if [ -f "$proxykubeconfig" ]; then
+              # Update config file
+              sed -i 's/metricsBindAddress:/metricsBindAddress: 127.0.0.1:10249/' "$proxykubeconfig"
+            else
+              # Update service file or command line
+              sed -i 's/--metrics-bind-address=[^ ]*/--metrics-bind-address=127.0.0.1:10249/g' "$proxykubeconfig"
+            fi
+            systemctl daemon-reload
+            systemctl restart kube-proxy.service
+          description: "Set kube-proxy metrics service to bind to localhost (127.0.0.1:10249)"
+          requires_sudo: true
+          dry_run_safe: false
         scored: true
