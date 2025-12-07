@@ -10,7 +10,7 @@ const fs = require("fs");
 const os = require("os");
 const app = express();
 require('dotenv').config();
-const IP = process.env.IP || 'localhost';
+const IP = process.env.IP || '0.0.0.0';
 const PORT = process.env.PORT || 3001;
 
 // Thành:
@@ -23,7 +23,7 @@ const BACKEND_URL = `http://${IP}:${PORT}`;
 
 // Paths
 const KUBE_CHECK_PATH = path.join(__dirname, "..", "Kube-check");
-const VENV_PATH = path.join(KUBE_CHECK_PATH, "venv");
+const VENV_PATH = path.join(__dirname, "..", "venv");
 const REPORTS_PATH = path.join(KUBE_CHECK_PATH, "reports");
 const PYTHON_EXECUTABLE =
   process.platform === "win32"
@@ -52,7 +52,7 @@ const CONFIG_MAPPING = {
 app.use(helmet());
 app.use(
   cors({
-    origin: [FRONTEND_URL, BACKEND_URL],
+    origin: true, // Allow all origins
     credentials: true,
   })
 );
@@ -469,40 +469,286 @@ app.get("/api/reports", (req, res) => {
   });
 });
 
-// Simulate benchmark scan process
-function simulateBenchmarkScan(scanJob, selectedItems) {
-  const totalItems = selectedItems.length;
-  let completedItems = 0;
-  const processItem = () => {
-    if (completedItems >= totalItems) {
-      scanJob.status = "completed";
-      scanJob.endTime = new Date().toISOString();
-      scanJob.progress = 100;
-      return;
+// Endpoint to run remediation
+app.post("/api/remediate", async (req, res) => {
+  try {
+    const { checkIds } = req.body;
+    if (!checkIds || !Array.isArray(checkIds) || checkIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "checkIds array is required",
+      });
     }
-    const currentItem = selectedItems[completedItems];
-    runKubeCheck(currentItem.id, (error, result) => {
-      if (error) {
-        result = {
-          itemId: currentItem.id,
-          title: currentItem.title,
-          status: "FAIL",
-          score: 0,
-          details: `Error running scan: ${error}`,
-          recommendations: [
-            "Check Kube-check configuration",
-            "Verify system requirements",
-          ],
-          timestamp: new Date().toISOString(),
-        };
+
+    console.log(`🔧 Received remediation request for checks: ${checkIds.join(", ")}`);
+
+    // Run remediation for each check sequentially
+    const results = [];
+    for (const checkId of checkIds) {
+      try {
+        console.log(`Title: Starting remediation workflow for ${checkId}`);
+        // 1. Execute Remediation
+        const remediationResult = await runRemediation(checkId);
+
+        if (!remediationResult.success) {
+          results.push({
+            checkId,
+            action: 'remediate',
+            success: false,
+            status: 'FAIL',
+            message: 'Remediation script failed',
+            details: remediationResult
+          });
+          continue;
+        }
+
+        // 2. Verification Phase (with retries)
+        console.log(`Title: Verifying fix for ${checkId}...`);
+
+        let verifyResult = { status: 'PENDING' };
+        // Retry logic: 3 attempts.
+        const delays = [3000, 10000, 15000];
+
+        for (let i = 0; i < delays.length; i++) {
+          console.log(`Title: Verification attempt ${i + 1}/${delays.length} for ${checkId} (waiting ${delays[i]}ms)...`);
+          await new Promise(r => setTimeout(r, delays[i]));
+
+          verifyResult = await runKubeCheckPromise(checkId);
+
+          if (verifyResult.status === 'PASS') {
+            console.log(`Title: Check ${checkId} PASSED verification on attempt ${i + 1}`);
+            break;
+          }
+        }
+
+        results.push({
+          checkId,
+          action: 'verify',
+          success: verifyResult.status === 'PASS',
+          status: verifyResult.status || 'FAIL',
+          message: verifyResult.status === 'PASS'
+            ? 'Fixed and verified successfully'
+            : `Fix applied but verification failed after ${delays.length} attempts. K8s might still be restarting.`,
+          details: remediationResult,
+          verifyDetails: verifyResult
+        });
+
+      } catch (error) {
+        console.error(`Error processing ${checkId}:`, error);
+        results.push({
+          checkId,
+          success: false,
+          status: 'ERROR',
+          error: error.message || String(error),
+        });
       }
-      scanJob.results.push(result);
-      completedItems++;
-      scanJob.progress = Math.round((completedItems / totalItems) * 100);
-      setTimeout(processItem, 1000);
+    }
+
+    res.json({
+      success: true,
+      results: results,
     });
+  } catch (error) {
+    console.error("❌ Remediation error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to execute remediation",
+      details: error.message,
+    });
+  }
+});
+
+// Helper wrapper for runKubeCheck to use Promise
+function runKubeCheckPromise(checkId) {
+  return new Promise((resolve, reject) => {
+    runKubeCheck(checkId, (err, result) => {
+      if (err) resolve({ status: 'ERROR', details: err }); // Don't reject, just return error status
+      else resolve(result); // result usually contains { status: 'PASS'/'FAIL', ... }
+    });
+  });
+}
+
+
+// Function to run remediation for a single check
+function runRemediation(checkId) {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(PYTHON_EXECUTABLE)) {
+      return reject(new Error(`Python executable not found: ${PYTHON_EXECUTABLE}`));
+    }
+
+    const command = PYTHON_EXECUTABLE;
+    // Use --yes to skip confirmation since the user confirmed in UI
+    const args = ["src/main.py", "remediate", "--check", checkId, "--output-format", "json", "--yes"];
+
+    const options = {
+      cwd: KUBE_CHECK_PATH,
+      timeout: 5 * 60 * 1000, // 5 minutes timeout per check
+      env: { ...process.env },
+    };
+
+    console.log(`Running remediation command for ${checkId}...`);
+    const child = spawn(command, args, options);
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    child.on("close", (code) => {
+      // Parse output regardless of exit code as 1 might be "remediation failed"
+      try {
+        const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]);
+          resolve({
+            checkId,
+            success: result.remediation_successful > 0 || code === 0,
+            details: result
+          });
+        } else {
+          resolve({
+            checkId,
+            success: code === 0,
+            rawOutput: stdout,
+            error: stderr
+          });
+        }
+      } catch (e) {
+        resolve({
+          checkId,
+          success: code === 0,
+          error: "Failed to parse output",
+          rawOutput: stdout
+        });
+      }
+    });
+
+    child.on("error", (error) => {
+      reject(error);
+    });
+  });
+}
+
+// Simulate benchmark scan process
+// Run benchmark scan process
+function simulateBenchmarkScan(scanJob, selectedItems) {
+  const checkIds = selectedItems.map((item) => item.id);
+  console.log(`Running batch scan for ${checkIds.length} checks...`);
+
+  runBatchScan(checkIds, (error, results) => {
+    if (error) {
+      console.error("Batch scan failed:", error);
+      // Mark all as failed if batch fails
+      scanJob.results = selectedItems.map(item => ({
+        itemId: item.id,
+        title: item.title,
+        status: "FAIL",
+        score: 0,
+        details: `Scan failed: ${error}`,
+        timestamp: new Date().toISOString()
+      }));
+    } else {
+      // Map results back to items
+      scanJob.results = results.map(r => {
+        let status = "FAIL";
+        if (r.passed) {
+          status = "PASS";
+        } else if (r.type === 'manual') {
+          status = "WARN";
+        }
+
+        return {
+          itemId: r.id,
+          title: r.text,
+          status: status,
+          score: r.scored ? (status === "PASS" ? 10 : 0) : 0,
+          details: r.error || (status === "PASS" ? "Check passed" : (status === "WARN" ? "Manual check required" : "Check failed")),
+          remediation: r.remediation,
+          timestamp: new Date().toISOString()
+        };
+      });
+    }
+
+    scanJob.status = "completed";
+    scanJob.endTime = new Date().toISOString();
+    scanJob.progress = 100;
+  });
+}
+
+// Function to run multiple Kube-checks in batch
+function runBatchScan(checkIds, callback) {
+  if (!fs.existsSync(PYTHON_EXECUTABLE)) {
+    return callback(
+      `Python executable not found: ${PYTHON_EXECUTABLE}`,
+      null
+    );
+  }
+
+  const command = PYTHON_EXECUTABLE;
+  // Join check IDs with comma
+  const checkArg = checkIds.join(",");
+  const args = ["src/main.py", "run", "--check", checkArg, "--output-format", "json"];
+
+  const options = {
+    cwd: KUBE_CHECK_PATH,
+    timeout: 30 * 60 * 1000,
+    env: { ...process.env },
   };
-  setTimeout(processItem, 1000);
+
+  console.log(`Executing batch command: ${command} ${args.join(" ")}`);
+  const child = spawn(command, args, options);
+
+  let stdout = "";
+  let stderr = "";
+
+  child.stdout.on("data", (data) => {
+    stdout += data.toString();
+  });
+
+  child.stderr.on("data", (data) => {
+    stderr += data.toString();
+  });
+
+  child.on("close", (code) => {
+    if (code === 0) {
+      try {
+        // Parse JSON output
+        // Find the JSON array in the output (it might be surrounded by logs)
+        const jsonMatch = stdout.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (!jsonMatch) {
+          console.error("No JSON found in output:", stdout);
+          return callback("Failed to parse scan output: No JSON found", null);
+        }
+
+        const groups = JSON.parse(jsonMatch[0]);
+        const allChecks = [];
+
+        // Flatten groups to get all checks
+        groups.forEach(group => {
+          if (group.checks) {
+            allChecks.push(...group.checks);
+          }
+        });
+
+        callback(null, allChecks);
+      } catch (e) {
+        console.error("JSON parse error:", e);
+        callback(`Failed to parse scan output: ${e.message}`, null);
+      }
+    } else {
+      callback(`Process exited with code ${code}: ${stderr}`, null);
+    }
+  });
+
+  child.on("error", (error) => {
+    callback(`Failed to start process: ${error.message}`, null);
+  });
 }
 
 // Function to run actual Kube-check scan
@@ -611,10 +857,10 @@ function parseKubeCheckOutput(checkId, output) {
       recommendations:
         status === "FAIL"
           ? [
-              "Review the failed check configuration",
-              "Apply recommended security settings",
-              "Consult CIS Kubernetes benchmark documentation",
-            ]
+            "Review the failed check configuration",
+            "Apply recommended security settings",
+            "Consult CIS Kubernetes benchmark documentation",
+          ]
           : [],
       timestamp: new Date().toISOString(),
       rawOutput: output.substring(0, 500),
@@ -689,9 +935,8 @@ async function runMultipleKubeChecks(checksByConfig, format, outputPath) {
         } else {
           resolve({
             success: false,
-            error: `Kube-check failed with exit code ${code}: ${
-              stderr || "Unknown error"
-            }`,
+            error: `Kube-check failed with exit code ${code}: ${stderr || "Unknown error"
+              }`,
             stdout: stdout,
             stderr: stderr,
           });

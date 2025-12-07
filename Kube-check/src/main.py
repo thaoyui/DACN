@@ -24,33 +24,14 @@ from weasyprint import HTML, CSS
 from parser import YAMLParser
 from executor import CheckExecutor
 from utils import Logger, Colors, format_duration, create_progress_bar
+from constants import GLOBAL_SUBSTITUTIONS
 
 class KubeBenchPython:
     """Enhanced main application class with kube-bench compatibility"""
     
     # Class-level constants để tránh duplicate
-    SUBSTITUTIONS = {
-        '$apiserverconf': '/etc/kubernetes/manifests/kube-apiserver.yaml',
-        '$controllermanagerconf': '/etc/kubernetes/manifests/kube-controller-manager.yaml',
-        '$schedulerconf': '/etc/kubernetes/manifests/kube-scheduler.yaml',
-        '$etcdconf': '/etc/kubernetes/manifests/etcd.yaml',
-        '$apiserverbin': 'kube-apiserver',
-        '$controllermanagerbin': 'kube-controller-manager',
-        '$schedulerbin': 'kube-scheduler',
-        '$etcdbin': 'etcd',
-        '$kubeletbin': 'kubelet',
-        '$etcddatadir': '/var/lib/etcd',
-        '$schedulerkubeconfig': '/etc/kubernetes/scheduler.conf',
-        '$controllermanagerkubeconfig': '/etc/kubernetes/controller-manager.conf',
-        '$kubeletbin': 'kubelet',
-        '$kubeletsvc': '/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf',
-        '$kubeletkubeconfig': '/etc/kubernetes/kubelet.conf',
-        '$kubeletconf': '/var/lib/kubelet/config.yaml',
-        '$kubeletcafile': '/etc/kubernetes/pki/ca.crt',
-        '$proxybin': 'kube-proxy',
-        '$proxykubeconfig': '/var/lib/kube-proxy/kubeconfig.conf',
-        '$proxyconf': '/var/lib/kube-proxy/config.conf'
-    }
+    # Class-level constants để tránh duplicate
+    SUBSTITUTIONS = GLOBAL_SUBSTITUTIONS
     
     SECTION_HEADERS = {
         'master': '1 Control Plane Security Configuration',
@@ -232,7 +213,17 @@ class KubeBenchPython:
         """Centralized output generation - eliminates duplicate output logic"""
         current_time = self._get_vietnam_timestamp()
         
-        if output_format == 'text':
+        if output_format == 'json':
+            import json
+            if output_file:
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(self.results, f, indent=2)
+                self.logger.success(f"JSON report generated: {output_file}")
+            else:
+                print(json.dumps(self.results, indent=2))
+            return True
+        
+        elif output_format == 'text':
             if output_file:
                 with open(output_file, 'w', encoding='utf-8') as f:
                     f.write('\n'.join(report_lines))

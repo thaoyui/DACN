@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://192.168.1.111:3001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 export interface BenchmarkSelection {
   id: string;
@@ -35,7 +35,7 @@ export interface ScanResult {
 class BenchmarkAPIService {
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const defaultHeaders = {
       'Content-Type': 'application/json',
     };
@@ -190,14 +190,14 @@ class BenchmarkAPIService {
   // Download report file
   async downloadReport(filename: string) {
     const url = `${API_BASE_URL}/api/download-report/${filename}`;
-    
+
     try {
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`Download failed: ${response.statusText}`);
       }
-      
+
       // Create blob and download
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -208,7 +208,7 @@ class BenchmarkAPIService {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
-      
+
       return { success: true };
     } catch (error) {
       console.error('Download error:', error);
@@ -226,17 +226,17 @@ class BenchmarkAPIService {
     try {
       // 1. Generate report
       const generateResponse = await this.generateReport(selectedItems, format, filename);
-      
+
       if (!generateResponse.success) {
         throw new Error(generateResponse.message || 'Failed to generate report');
       }
-      
+
       const reportFilename = generateResponse.data.filename;
       console.log('✅ Report generated:', reportFilename);
-      
+
       // 2. Automatically download
       await this.downloadReport(reportFilename);
-      
+
       return {
         success: true,
         filename: reportFilename,
@@ -246,6 +246,15 @@ class BenchmarkAPIService {
       console.error('Error in generateAndDownloadReport:', error);
       throw error;
     }
+  }
+  // Remediate specific checks
+  async remediateCheck(checkIds: string[]) {
+    return this.makeRequest('/api/remediate', {
+      method: 'POST',
+      body: JSON.stringify({
+        checkIds
+      }),
+    });
   }
 }
 

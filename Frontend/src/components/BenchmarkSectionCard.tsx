@@ -7,15 +7,17 @@ interface BenchmarkSectionCardProps {
   section: BenchmarkSection;
   onToggleItem: (id: string) => void;
   onToggleSection: (sectionId: string) => void;
+  onRemediate: (checkId: string) => void;
 }
 
 export const BenchmarkSectionCard: React.FC<BenchmarkSectionCardProps> = ({
   section,
   onToggleItem,
   onToggleSection,
+  onRemediate,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   const selectedCount = section.items.filter(item => item.selected).length;
   const totalCount = section.items.length;
   const allSelected = selectedCount === totalCount;
@@ -44,7 +46,7 @@ export const BenchmarkSectionCard: React.FC<BenchmarkSectionCardProps> = ({
               {section.title}
             </h2>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-500">
               {selectedCount} of {totalCount} selected
@@ -66,7 +68,7 @@ export const BenchmarkSectionCard: React.FC<BenchmarkSectionCardProps> = ({
             </button>
           </div>
         </div>
-        
+
         {/* Progress bar */}
         <div className="mt-4">
           <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -90,6 +92,7 @@ export const BenchmarkSectionCard: React.FC<BenchmarkSectionCardProps> = ({
                 key={item.id}
                 item={item}
                 onToggle={onToggleItem}
+                onRemediate={onRemediate}
               />
             ))}
           </div>

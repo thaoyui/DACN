@@ -4,6 +4,8 @@ export interface BenchmarkItem {
   description: string;
   type: 'Automated' | 'Manual';
   selected: boolean;
+  status?: 'PASS' | 'FAIL' | 'WARN' | 'INFO';
+  remediation?: string;
 }
 
 export interface BenchmarkSection {

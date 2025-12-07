@@ -13,6 +13,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, List, Any, Tuple, Optional, Union
 from utils import Logger, PerformanceTimer, safe_file_read
+from constants import SUBSTITUTIONS
 
 class CheckExecutor:
     """Enhanced executor supporting all kube-bench patterns including dual audit and policies"""
@@ -51,19 +52,10 @@ class CheckExecutor:
             self.logger.error(f"Error reading {component_type} config from files: {e}")
             return {}
     
-    def _get_etcd_config_from_files(self) -> Dict[str, str]:
-        """Read etcd config from manifest files"""
+    def _load_config_from_paths(self, paths: List[str], component_name: str, prefix: str = "", is_manifest: bool = True) -> Dict[str, str]:
+        """Generic method to load config from a list of paths"""
         config_dict = {}
-        
-        etcd_paths = [
-            '/etc/kubernetes/manifests/etcd.yaml',
-            '/etc/kubernetes/manifests/etcd.yml',
-            '/etc/kubernetes/manifests/etcd.manifest',
-            '/var/lib/rancher/rke2/agent/pod-manifests/etcd.yaml',
-            '/var/lib/rancher/k3s/server/db/etcd/config'
-        ]
-        
-        for path in etcd_paths:
+        for path in paths:
             if Path(path).exists():
                 try:
                     content = safe_file_read(path)
@@ -71,51 +63,51 @@ class CheckExecutor:
                         continue
                         
                     if path.endswith(('.yaml', '.yml')):
-                        manifest = yaml.safe_load(content)
-                        config_dict.update(self._extract_args_from_manifest(manifest, 'etcd'))
+                        data = yaml.safe_load(content)
+                        if is_manifest:
+                            extracted = self._extract_args_from_manifest(data, component_name)
+                        else:
+                            # Flatten simple dict if needed or just use as is if structure matches
+                            # For kubelet/proxy, it's flat key-value mostly
+                            extracted = {}
+                            if isinstance(data, dict):
+                                for k, v in data.items():
+                                    extracted[k] = v
                     else:
-                        config_dict.update(self._parse_config_file(content))
+                        extracted = self._parse_config_file(content)
                     
-                    self.logger.info(f"Read etcd config from {path}")
-                    break
+                    # Apply prefix if needed
+                    for key, value in extracted.items():
+                        final_key = f"{prefix}_{key}" if prefix else key
+                        config_dict[final_key] = str(value)
+                    
+                    self.logger.info(f"Read {component_name} config from {path}")
+                    return config_dict # Return on first successful read
                     
                 except Exception as e:
                     self.logger.warning(f"Failed to read {path}: {e}")
                     continue
-        
         return config_dict
+    
+    def _get_etcd_config_from_files(self) -> Dict[str, str]:
+        """Read etcd config from manifest files"""
+        etcd_paths = [
+            '/etc/kubernetes/manifests/etcd.yaml',
+            '/etc/kubernetes/manifests/etcd.yml',
+            '/etc/kubernetes/manifests/etcd.manifest',
+            '/var/lib/rancher/rke2/agent/pod-manifests/etcd.yaml',
+            '/var/lib/rancher/k3s/server/db/etcd/config'
+        ]
+        return self._load_config_from_paths(etcd_paths, 'etcd')
     
     def _get_controlplane_config_from_files(self) -> Dict[str, str]:
         """Read API server config from manifest files"""
-        config_dict = {}
-        
         api_server_paths = [
             '/etc/kubernetes/manifests/kube-apiserver.yaml',
             '/etc/kubernetes/manifests/kube-apiserver.yml',
             '/etc/kubernetes/manifests/kube-apiserver.manifest'
         ]
-        
-        for path in api_server_paths:
-            if Path(path).exists():
-                try:
-                    content = safe_file_read(path)
-                    if not content:
-                        continue
-                        
-                    manifest = yaml.safe_load(content)
-                    extracted = self._extract_args_from_manifest(manifest, 'kube-apiserver')
-                    
-                    for key, value in extracted.items():
-                        config_dict[f"apiserver_{key}"] = value
-                    
-                    self.logger.info(f"Read API server config from {path}")
-                    break
-                    
-                except Exception as e:
-                    self.logger.warning(f"Failed to read {path}: {e}")
-                    continue
-        
-        return config_dict
+        return self._load_config_from_paths(api_server_paths, 'kube-apiserver', prefix='apiserver')
     
     def _get_master_config_from_files(self) -> Dict[str, str]:
         """Read master node config from all control plane component files"""
@@ -132,26 +124,7 @@ class CheckExecutor:
                 f'/etc/kubernetes/manifests/{component_name}.yaml',
                 f'/etc/kubernetes/manifests/{component_name}.yml'
             ]
-            
-            for path in manifest_paths:
-                if Path(path).exists():
-                    try:
-                        content = safe_file_read(path)
-                        if not content:
-                            continue
-                            
-                        manifest = yaml.safe_load(content)
-                        extracted = self._extract_args_from_manifest(manifest, component_name)
-                        
-                        for key, value in extracted.items():
-                            config_dict[f"{prefix}_{key}"] = value
-                        
-                        self.logger.info(f"Read {component_name} config from {path}")
-                        break
-                        
-                    except Exception as e:
-                        self.logger.warning(f"Failed to read {path}: {e}")
-                        continue
+            config_dict.update(self._load_config_from_paths(manifest_paths, component_name, prefix))
         
         return config_dict
     
@@ -165,23 +138,7 @@ class CheckExecutor:
             '/etc/kubernetes/kubelet/kubelet-config.yaml',
             '/etc/kubernetes/kubelet.yaml'
         ]
-        
-        for path in kubelet_config_paths:
-            if Path(path).exists():
-                try:
-                    content = safe_file_read(path)
-                    if content:
-                        kubelet_config = yaml.safe_load(content)
-                        # Extract kubelet config values
-                        for key, value in kubelet_config.items():
-                            config_dict[f"kubelet_{key}"] = str(value)
-                        
-                        self.logger.info(f"Read kubelet config from {path}")
-                        break
-                        
-                except Exception as e:
-                    self.logger.warning(f"Failed to read kubelet config {path}: {e}")
-                    continue
+        config_dict.update(self._load_config_from_paths(kubelet_config_paths, 'kubelet', prefix='kubelet', is_manifest=False))
         
         # Kube-proxy config paths
         proxy_config_paths = [
@@ -189,23 +146,7 @@ class CheckExecutor:
             '/etc/kubernetes/kube-proxy.yaml',
             '/var/lib/kube-proxy/kubeconfig.conf'
         ]
-        
-        for path in proxy_config_paths:
-            if Path(path).exists():
-                try:
-                    content = safe_file_read(path)
-                    if content:
-                        proxy_config = yaml.safe_load(content)
-                        # Extract proxy config values
-                        for key, value in proxy_config.items():
-                            config_dict[f"proxy_{key}"] = str(value)
-                        
-                        self.logger.info(f"Read kube-proxy config from {path}")
-                        break
-                        
-                except Exception as e:
-                    self.logger.warning(f"Failed to read kube-proxy config {path}: {e}")
-                    continue
+        config_dict.update(self._load_config_from_paths(proxy_config_paths, 'kube-proxy', prefix='proxy', is_manifest=False))
         
         return config_dict
     
@@ -320,48 +261,11 @@ class CheckExecutor:
             return ""
     
     def _substitute_variables(self, cmd: str, component_type: str) -> str:
-        """Enhanced variable substitution with node support"""
-        substitutions = {
-            'etcd': {
-                '$etcdbin': 'etcd',
-                '$etcdconf': '/etc/kubernetes/manifests/etcd.yaml',
-                '$etcddatadir': '/var/lib/etcd'
-            },
-            'controlplane': {
-                '$apiserverbin': 'kube-apiserver',
-                '$apiserverconf': '/etc/kubernetes/manifests/kube-apiserver.yaml'
-            },
-            'master': {
-                '$apiserverbin': 'kube-apiserver',
-                '$apiserverconf': '/etc/kubernetes/manifests/kube-apiserver.yaml',
-                '$controllermanagerbin': 'kube-controller-manager',
-                '$controllermanagerconf': '/etc/kubernetes/manifests/kube-controller-manager.yaml',
-                '$schedulerbin': 'kube-scheduler',
-                '$schedulerconf': '/etc/kubernetes/manifests/kube-scheduler.yaml',
-                '$schedulerkubeconfig': '/etc/kubernetes/scheduler.conf',
-                '$controllermanagerkubeconfig': '/etc/kubernetes/controller-manager.conf',
-                '$etcddatadir': '/var/lib/etcd',
-                '$kubeletbin': 'kubelet',
-                '$etcdconf': '/etc/kubernetes/manifests/etcd.yaml',
-                '$etcdbin': 'etcd',
-            },
-            'node': {
-                '$kubeletbin': 'kubelet',
-                '$kubeletsvc': '/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf',
-                '$kubeletkubeconfig': '/etc/kubernetes/kubelet.conf',
-                '$kubeletconf': '/var/lib/kubelet/config.yaml',
-                '$kubeletcafile': '/etc/kubernetes/pki/ca.crt',
-                '$proxybin': 'kube-proxy',
-                '$proxykubeconfig': '/var/lib/kube-proxy/kubeconfig.conf',
-                '$proxyconf': '/var/lib/kube-proxy/config.conf'
-            },
-            'policies': {
-                # Policies typically use kubectl directly
-            }
-        }
+        """Enhanced variable substitution using centralized constants"""
+        # Get substitutions from constants
+        component_subs = SUBSTITUTIONS.get(component_type, {})
         
         # Apply substitutions
-        component_subs = substitutions.get(component_type, {})
         for var, value in component_subs.items():
             cmd = cmd.replace(var, value)
         
@@ -526,6 +430,8 @@ class CheckExecutor:
         
         return False, "Ownership not found"
         
+        return False, "Flag not found"
+
     def _check_standard_flag(self, output: str, flag: str,
                             env_var: Optional[str] = None) -> Tuple[bool, str]:
         """
@@ -811,7 +717,24 @@ class CheckExecutor:
         audit_cmd = check.get('audit')
         audit_config_cmd = check.get('audit_config')  # Support for dual audit
         tests = check.get('tests', {})
-        check_type = check.get('type', 'automated')
+        
+        # Determine check type - trust YAML first, then check text for "(Manual)"
+        check_text = check.get('text', 'No description')
+        check_type = check.get('type')
+        
+        # If type is missing or defaulted to automated, check text for Manual override
+        if not check_type or check_type == 'automated':
+            if '(Manual)' in check_text:
+                check_type = 'manual'
+            elif not check_type:
+                check_type = 'automated'
+        
+        # Debug logging (can be removed later)
+        # with open("/tmp/debug_executor.txt", "a") as f:
+        #     f.write(f"DEBUG: Check {check_id} - Text: '{check_text}'\n")
+        #     f.write(f"DEBUG: Check {check_id} - Type from YAML: '{check.get('type')}'\n")
+        #     f.write(f"DEBUG: Check {check_id} - Detected Type: '{check_type}'\n")
+                
         use_multiple_values = check.get('use_multiple_values', False)
         scored = check.get('scored', True)
         
@@ -819,8 +742,9 @@ class CheckExecutor:
         
         self.logger.info(f"Executing check {check_id}: {check.get('text', 'No description')}")
         
-        # Handle manual checks
-        if check_type == 'manual' or (not audit_cmd and not audit_config_cmd):
+        # Handle manual checks - ONLY skip if no audit command exists
+        # If audit command exists, we run it even if marked Manual (user request)
+        if not audit_cmd and not audit_config_cmd:
             return {
                 'id': check_id,
                 'text': check.get('text', 'No description'),
@@ -883,7 +807,8 @@ class CheckExecutor:
                 'remediation': check.get('remediation') if not overall_passed else None,
                 'execution_time': round(execution_time, 3),
                 'use_multiple_values': use_multiple_values,
-                'has_dual_audit': bool(audit_config_cmd)
+                'has_dual_audit': bool(audit_config_cmd),
+                'type': check_type
             }
             
         except Exception as e:
@@ -909,6 +834,17 @@ class CheckExecutor:
         bin_op = tests.get('bin_op', 'and')
         scored = check.get('scored', True)
         
+        # Determine check type - trust YAML first, then check text for "(Manual)"
+        check_text = check.get('text', 'No description')
+        check_type = check.get('type')
+        
+        # If type is missing or defaulted to automated, check text for Manual override
+        if not check_type or check_type == 'automated':
+            if '(Manual)' in check_text:
+                check_type = 'manual'
+            elif not check_type:
+                check_type = 'automated'
+        
         # Split output into lines for multiple value processing
         lines = [line.strip() for line in audit_output.strip().split('\n') if line.strip()]
         all_results = []
@@ -924,7 +860,8 @@ class CheckExecutor:
                 'remediation': check.get('remediation'),
                 'execution_time': round(execution_time, 3),
                 'lines_processed': 0,
-                'message': 'No output to process'
+                'message': 'No output to process',
+                'type': check_type
             }
         
         # Process each line
@@ -996,7 +933,8 @@ class CheckExecutor:
             'remediation': check.get('remediation') if not overall_passed else None,
             'execution_time': round(execution_time, 3),
             'lines_processed': len(lines),
-            'multiple_values': True
+            'multiple_values': True,
+            'type': check_type
         }
     
     def execute_auto_remediation(self, check: Dict[str, Any], dry_run: bool = False, 

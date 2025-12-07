@@ -517,8 +517,11 @@ groups:
           --kubelet-certificate-authority=<ca-string>
         auto_remediation:
           command: |
-            # Chỉ thêm --kubelet-certificate-authority nếu chưa có
-            if ! grep -q -- "--kubelet-certificate-authority" "$apiserverconf"; then
+            # Uncomment if commented out
+            sed -i 's/^[[:space:]]*#[[:space:]]*-[[:space:]]*--kubelet-certificate-authority/    - --kubelet-certificate-authority/' "$apiserverconf"
+            
+            # Add if still missing (active)
+            if ! grep -E "^[[:space:]]*-[[:space:]]*--kubelet-certificate-authority" "$apiserverconf"; then
               awk '
                 /^[[:space:]]*-[[:space:]]*kube-apiserver([[:space:]]|$)/ {
                   print;
@@ -529,7 +532,7 @@ groups:
                 {print}
               ' "$apiserverconf" > "$apiserverconf.tmp" && mv "$apiserverconf.tmp" "$apiserverconf"
             fi
-          description: "Add --kubelet-certificate-authority parameter to API server manifest (if missing)"
+          description: "Ensure --kubelet-certificate-authority is set (uncomment if commented, add if missing)"
           requires_sudo: true
           dry_run_safe: true          
         scored: true
